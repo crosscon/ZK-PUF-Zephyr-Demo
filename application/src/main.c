@@ -5,11 +5,16 @@
 
 #define IS_WRITE_TO_FLASH_ENABLED 1
 
-int main(void)
-{
-    printf(VM": PUF TA Initialized\r\n");
-
+void vm_init() {
     IRQ_CONNECT(IPC_IRQ_ID, 0, ipc_irq_handler, NULL, 0);
     irq_enable(IPC_IRQ_ID);
+    printf(VM": PUF TA Initialized\r\n");
+}
+
+int main(void)
+{
+    vm_init();
+
+    // Wait for interrupts and handle them according to function_table
     while(1);
 }
