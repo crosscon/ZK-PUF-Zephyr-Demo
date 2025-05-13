@@ -23,6 +23,7 @@ typedef struct {
 } uuid_func_map_t;
 
 
+
 TEE_Result puf_enrollment_handler(void){
     __attribute__((aligned(16))) uint8_t activation_code[PUF_ACTIVATION_CODE_SIZE];
     const struct flash_area *flash_area;
@@ -138,7 +139,7 @@ static const uuid_func_map_t function_table[] = {
             0x66, 0x77,               /* timeHi+ver */
             0x88, 0x99, 0xAA, 0xBB,   /* clockSeq   */
             0xCC, 0xDD, 0xEE, 0xFF    /* node       */
-        },
+        }
         .handler = puf_enrollment_handler,
     },
     {
@@ -198,3 +199,4 @@ void ipc_irq_handler(void)
         }
     }
 }
+

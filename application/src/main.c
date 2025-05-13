@@ -6,9 +6,9 @@
 #include "mbedtls/memory_buffer_alloc.h"
 #include "utils.h"
 
+
 #define MEMORY_BUF_SIZE 16384
 static unsigned char memory_buf[MEMORY_BUF_SIZE];
-
 
 void vm_init() {
     IRQ_CONNECT(IPC_IRQ_ID, 0, ipc_irq_handler, NULL, 0);

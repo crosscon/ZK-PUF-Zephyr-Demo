@@ -2,11 +2,11 @@
 
 ## Building
 ```sh
-west build -p -b lpcxpresso55s69/lpc55s69/cpu0 ./project_path
+west build -d build -p always -b lpcxpresso55s69/lpc55s69/cpu0/ns application/
 ```
 
 ## Flashing
 
 ```sh
-west flash
+LinkServer flash LPC55S69:LPCXpresso55S69 load build/zephyr/zephyr.elf
 ```
