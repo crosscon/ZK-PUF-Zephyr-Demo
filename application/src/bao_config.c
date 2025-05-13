@@ -139,7 +139,7 @@ static const uuid_func_map_t function_table[] = {
             0x66, 0x77,               /* timeHi+ver */
             0x88, 0x99, 0xAA, 0xBB,   /* clockSeq   */
             0xCC, 0xDD, 0xEE, 0xFF    /* node       */
-        }
+        },
         .handler = puf_enrollment_handler,
     },
     {
