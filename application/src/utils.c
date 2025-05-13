@@ -13,7 +13,7 @@ int rand_function(void *rng_state, unsigned char *output, size_t len) {
 
     size_t use_len;
 	int rnd;
-    
+
 	if (rng_state != NULL)
 		rng_state = NULL;
 
@@ -28,7 +28,7 @@ int rand_function(void *rng_state, unsigned char *output, size_t len) {
 		len -= use_len;
 	}
 
-    
+
 	return (0);
 }
 

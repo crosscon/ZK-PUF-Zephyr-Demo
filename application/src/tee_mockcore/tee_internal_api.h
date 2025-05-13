@@ -36,4 +36,3 @@
 #define TEE_UUID_LEN 16
 
 typedef uint32_t TEE_Result;
-

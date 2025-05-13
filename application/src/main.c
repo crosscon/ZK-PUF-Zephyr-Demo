@@ -18,7 +18,7 @@ void vm_init() {
 
 int main(void)
 {
-    mbedtls_memory_buffer_alloc_init(memory_buf, sizeof(memory_buf));    
+    mbedtls_memory_buffer_alloc_init(memory_buf, sizeof(memory_buf));
     vm_init();
 
     // Wait for interrupts and handle them according to function_table

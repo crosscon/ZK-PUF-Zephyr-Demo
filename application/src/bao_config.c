@@ -34,15 +34,15 @@ TEE_Result puf_enrollment_handler(void){
     mbedtls_ecp_group grp;
 	mbedtls_ecp_point h, C;
 
-    // Initialize flash area and device 
+    // Initialize flash area and device
     ret = flash_initialize(FIXED_PARTITION_ID(STORAGE_PARTITION), &flash_area, &flash_dev);
     if (ret != 0) {
         printf("Flash Initialization failed!\r\n");
         return ret;
     }
-    
 
-    ret = perform_enrollment(&grp,&h,&C,c1,CHALLENGE_SIZE, c2, CHALLENGE_SIZE, 
+
+    ret = perform_enrollment(&grp,&h,&C,c1,CHALLENGE_SIZE, c2, CHALLENGE_SIZE,
         PUF,pufConfig,
         activation_code,
         PUF_ACTIVATION_CODE_SIZE,
@@ -89,7 +89,7 @@ TEE_Result puf_authentication_handler(void){
     mbedtls_ecp_group grp;
 	mbedtls_ecp_point h, C;
 
-    // Initialize flash area and device 
+    // Initialize flash area and device
     ret = flash_initialize(FIXED_PARTITION_ID(STORAGE_PARTITION), &flash_area, &flash_dev);
     if (ret != 0) {
         printf("Flash Initialization failed!\r\n");
@@ -103,7 +103,7 @@ TEE_Result puf_authentication_handler(void){
     mbedtls_mpi_init(&result_w);
     mbedtls_mpi_init(&nonce);
 
-    ret = perform_authentication(&grp, &grp.G, &h, &proof, &C, &result_v, &result_w, &nonce , c1, CHALLENGE_SIZE, c2, CHALLENGE_SIZE, 
+    ret = perform_authentication(&grp, &grp.G, &h, &proof, &C, &result_v, &result_w, &nonce , c1, CHALLENGE_SIZE, c2, CHALLENGE_SIZE,
                         PUF,pufConfig,
                         activation_code,
                         PUF_ACTIVATION_CODE_SIZE,
@@ -199,4 +199,3 @@ void ipc_irq_handler(void)
         }
     }
 }
-
