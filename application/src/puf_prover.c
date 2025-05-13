@@ -155,17 +155,11 @@ int get_puf_key(PUF_Type *puf,
     if (outputBuffer != NULL) {
         memcpy(outputBuffer, intrinsicKey, PUF_KEY_SIZE);
     }
-    
+
     flash_area_close(flash_area);
 
     return 0;
 }
-
-void puf_deinit(PUF_Type *puf,puf_config_t pufConfig){
-    PUF_Deinit(puf, &pufConfig);
-}
-
-
 
 int get_response_to_challenge(const uint8_t *c, size_t c_size, mbedtls_mpi *r, PUF_Type *puf,
                           uint8_t *activation_code,
@@ -284,9 +278,6 @@ int perform_enrollment(mbedtls_ecp_group *grp, mbedtls_ecp_point *h, mbedtls_ecp
 	if(mbedtls_ecp_muladd(grp, C, &mpiValue_R1, &grp->G, &mpiValue_R2, h) != 0) { // C = g * R1 + h * R2
 		return 1;
 	}
-
-    puf_deinit(puf,pufConfig); // Deinitalization Of Puf
-
 	return 0;
 
 }
@@ -429,10 +420,5 @@ int perform_authentication(mbedtls_ecp_group *grp, mbedtls_ecp_point *g, mbedtls
 
 	add_mul_mod(&random_r, &result_c, &mpiValue_R1, &grp->P, result_v);
 	add_mul_mod(&random_u, &result_c, &mpiValue_R2, &grp->P, result_w);
-
-    puf_deinit(puf,pufConfig); // Deinitalization Of Puf
-
 	return 0;
-
 }
-
