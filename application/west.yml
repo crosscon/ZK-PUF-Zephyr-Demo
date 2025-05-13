@@ -5,7 +5,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject-rtos-fork
-      revision: v4.1.0
+      revision: UC1_1_VM_PUF
       import: true
   self:
     path: application
