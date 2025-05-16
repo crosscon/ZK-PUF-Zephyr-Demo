@@ -25,29 +25,22 @@ typedef struct {
 
 
 TEE_Result puf_enrollment_handler(void){
-    __attribute__((aligned(16))) uint8_t activation_code[PUF_ACTIVATION_CODE_SIZE];
-    const struct flash_area *flash_area;
-    const struct device *flash_dev;
-    int ret;
-    puf_config_t pufConfig;
-
-    mbedtls_ecp_group grp;
-	mbedtls_ecp_point h, C;
-
-    // Initialize flash area and device
-    ret = flash_initialize(FIXED_PARTITION_ID(STORAGE_PARTITION), &flash_area, &flash_dev);
-    if (ret != 0) {
-        printf("Flash Initialization failed!\r\n");
-        return ret;
+    
+    if(!puf_and_ecc_intialisation){
+        printf("PUF and Flash initialisation was not performed before enrollment\t\n");
+        return TEE_ERROR_GENERIC;
     }
 
+    puf_and_ecc_intialisation = false;
 
-    ret = perform_enrollment(&grp,&h,&C,c1,CHALLENGE_SIZE, c2, CHALLENGE_SIZE,
-        PUF,pufConfig,
-        activation_code,
+    int ret;
+    
+    ret = perform_enrollment(&ecp_grp,&h_point,&C_point,c1,CHALLENGE_SIZE, c2, CHALLENGE_SIZE, 
+        PUF,puf_config_instance,
+        activation_code_buffer,
         PUF_ACTIVATION_CODE_SIZE,
-        flash_area,
-        flash_dev,
+        flash_area_instance,
+        flash_dev_instance,
         ENROLLMENT_IS_UP);
 
     if(ret!=0){
@@ -61,7 +54,7 @@ TEE_Result puf_enrollment_handler(void){
         uint8_t commitment_buffer[COMMITMENT_BUFFER_SIZE];
 
         size_t olen;
-        olen = export_commitment(&grp,&C, commitment_buffer, sizeof(commitment_buffer));
+        olen = export_commitment(&ecp_grp,&C_point, commitment_buffer, sizeof(commitment_buffer));
         if (olen < 0) {
         printf("Error exporting commitment, error code: %d\n", olen);
         return 1;
@@ -79,22 +72,15 @@ TEE_Result puf_enrollment_handler(void){
 }
 
 TEE_Result puf_authentication_handler(void){
-    __attribute__((aligned(16))) uint8_t activation_code[PUF_ACTIVATION_CODE_SIZE];
 
-    const struct flash_area *flash_area;
-    const struct device *flash_dev;
-    int ret;
-    puf_config_t pufConfig;
-
-    mbedtls_ecp_group grp;
-	mbedtls_ecp_point h, C;
-
-    // Initialize flash area and device
-    ret = flash_initialize(FIXED_PARTITION_ID(STORAGE_PARTITION), &flash_area, &flash_dev);
-    if (ret != 0) {
-        printf("Flash Initialization failed!\r\n");
-        return ret;
+    if(!puf_and_ecc_intialisation){
+        printf("PUF and Flash initialisation was not performed before authentication\t\n");
+        return TEE_ERROR_GENERIC;
     }
+
+    puf_and_ecc_intialisation = false;
+
+    int ret;
 
     mbedtls_ecp_point proof;
     mbedtls_ecp_point_init(&proof);
@@ -103,12 +89,12 @@ TEE_Result puf_authentication_handler(void){
     mbedtls_mpi_init(&result_w);
     mbedtls_mpi_init(&nonce);
 
-    ret = perform_authentication(&grp, &grp.G, &h, &proof, &C, &result_v, &result_w, &nonce , c1, CHALLENGE_SIZE, c2, CHALLENGE_SIZE,
-                        PUF,pufConfig,
-                        activation_code,
+    ret = perform_authentication(&ecp_grp, &ecp_grp.G, &h_point, &proof, &C_point, &result_v, &result_w, &nonce , c1, CHALLENGE_SIZE, c2, CHALLENGE_SIZE, 
+                        PUF,puf_config_instance,
+                        activation_code_buffer,
                         PUF_ACTIVATION_CODE_SIZE,
-                        flash_area,
-                        flash_dev,commitment_hex, COMMITMENT_BUFFER_SIZE);
+                        flash_area_instance,
+                        flash_dev_instance,commitment_hex, COMMITMENT_BUFFER_SIZE);
 
     if(ret!=0){
         printf("Couldn't Authenticate the device\r\n");
@@ -120,14 +106,32 @@ TEE_Result puf_authentication_handler(void){
         print_mpi("v", &result_v);
         print_mpi("w", &result_w);
         print_mpi("nonce", &nonce);
-        print_ecp_point("proof", &grp, &proof);
+        print_ecp_point("proof", &ecp_grp, &proof);
     }
 
     return TEE_SUCCESS;
 }
 
-TEE_Result dummy_function_3(void){
-    return TEE_ERROR_CANCEL;
+TEE_Result initialise_parameters(void){
+
+    puf_and_ecc_intialisation = false;
+
+    int ret;
+    // Initialize flash area and device 
+    ret = flash_initialize(FIXED_PARTITION_ID(STORAGE_PARTITION), &flash_area_instance, &flash_dev_instance);
+    if (ret != 0) {
+        printf("Flash Initialization failed!\r\n");
+        return TEE_ERROR_GENERIC;
+    }
+
+    if(initialize_puf_and_ECC(&ecp_grp,&h_point,&C_point, PUF, puf_config_instance, activation_code_buffer, PUF_ACTIVATION_CODE_SIZE, flash_area_instance, flash_dev_instance, ENROLLMENT_IS_UP) != 0 ){
+        printf("Couldn't Initialise\r\n");
+        return TEE_ERROR_GENERIC;
+    }
+    
+    puf_and_ecc_intialisation = true;
+
+    return TEE_SUCCESS;
 }
 
 
@@ -160,7 +164,7 @@ static const uuid_func_map_t function_table[] = {
             0xAA, 0xBB, 0xCC, 0xDD,   /* clockSeq   */
             0xEE, 0xFF, 0x00, 0x11    /* node       */
         },
-        .handler = dummy_function_3,
+        .handler = initialise_parameters,
     }
 };
 

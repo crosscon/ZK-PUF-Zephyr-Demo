@@ -15,3 +15,20 @@ const uint8_t c2[CHALLENGE_SIZE] = {
     0x00, 0xFF, 0x00, 0xFF,
     0x00, 0xFF, 0x00, 0xFF
 };
+
+
+//ECC points 
+puf_config_t puf_config_instance;
+
+mbedtls_ecp_group ecp_grp;
+mbedtls_ecp_point h_point, C_point;
+
+bool puf_and_ecc_intialisation = false;
+
+
+//activation code
+__attribute__((aligned(16))) uint8_t activation_code_buffer[PUF_ACTIVATION_CODE_SIZE];
+
+//flash parameters
+const struct flash_area *flash_area_instance = NULL;
+const struct device *flash_dev_instance= NULL;
