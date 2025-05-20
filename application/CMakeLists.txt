@@ -5,9 +5,15 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(puf_vm)
 
-target_sources(app PRIVATE src/main.c src/puf_prover.c src/flash_handler.c src/crosscon_hv/crosscon_hv_config.c)
+target_sources(app PRIVATE src/main.c
+                           src/puf_prover.c
+                           src/flash_handler.c
+                           src/crosscon_hv/crosscon_hv_config.c
+                           )
 
-include_directories(src/tee_mockcore/ src/crosscon_hv/)
+include_directories(src/tee_mockcore/
+                    src/crosscon_hv/
+                    )
 
 # Include the fsl_puf driver in HAL_NXP
 set(PUF_path $ENV{ZEPHYR_BASE}/../modules/hal/nxp/mcux/mcux-sdk/drivers/puf)
