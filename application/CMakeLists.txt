@@ -14,7 +14,7 @@ target_sources(app PRIVATE src/main.c
 
 include_directories(src/
                     src/crosscon_hv/
-                    src/tee_mockcore/
+                    src/crosscon_hv/tee_mockcore/
                     )
 
 # Include the fsl_puf driver in HAL_NXP
