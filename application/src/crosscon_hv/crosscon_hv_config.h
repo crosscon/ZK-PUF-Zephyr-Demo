@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <zephyr/irq.h>
 #include <cmsis_core.h>
+#include "hv_functions.h"
+#include "tee_internal_api.h"
 
 #define VM                  "VM1"
 #define IPC_IRQ_ID          63      //79 on Bao config

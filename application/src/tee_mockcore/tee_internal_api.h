@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 /* API Error Codes */
 #define TEE_SUCCESS                       0x00000000
 #define TEE_ERROR_CORRUPT_OBJECT          0xF0100001
