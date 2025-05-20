@@ -1,14 +1,14 @@
-#include "bao_config.h"
+#include "crosscon_hv_config.h"
 #include <stdio.h>
 #include <string.h>
 #include "tee_internal_api.h"
 
-void (*bao_hypercall)(unsigned int, unsigned int, unsigned int) =
-    (void (*)(unsigned int, unsigned int, unsigned int))BAO_HC_ADDR;
+void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int) =
+    (void (*)(unsigned int, unsigned int, unsigned int))CROSSCON_HV_HC_ADDR;
 
 void ipc_notify(int ipc_id, int event_id)
 {
-    bao_hypercall(BAO_HC_IPC_ID, ipc_id, event_id);
+    crosscon_hv_hypercall(CROSSCON_HV_HC_IPC_ID, ipc_id, event_id);
 }
 
 typedef struct {

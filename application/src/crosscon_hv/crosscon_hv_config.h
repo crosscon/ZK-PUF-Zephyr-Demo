@@ -5,10 +5,10 @@
 
 #define VM                  "VM1"
 #define IPC_IRQ_ID          63      //79 on Bao config
-#define BAO_IMAGE_START     0x10000000UL
-#define BAO_HC_OFF          0x41UL
-#define BAO_HC_ADDR         ((uintptr_t)BAO_IMAGE_START + BAO_HC_OFF)
-#define BAO_HC_IPC_ID       0x1
+#define CROSSCON_HV_IMAGE_START     0x10000000UL
+#define CROSSCON_HV_HC_OFF          0x41UL
+#define CROSSCON_HV_HC_ADDR         ((uintptr_t)CROSSCON_HV_IMAGE_START + CROSSCON_HV_HC_OFF)
+#define CROSSCON_HV_HC_IPC_ID       0x1
 #define VMS_IPC_BASE        0x20017000UL
 #define VMS_IPC_SIZE        0x1000
 
@@ -28,7 +28,7 @@ static char* const message[3] = {
     (const char*)(MESSAGE2_OFFSET),
 };
 
-extern void (*bao_hypercall)(unsigned int, unsigned int, unsigned int);
+extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
 
 void ipc_notify(int ipc_id, int event_id);
 void ipc_irq_handler(void);

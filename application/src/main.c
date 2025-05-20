@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "flash_handler.h"
 #include "puf_prover.h"
-#include "bao_config.h"
+#include "crosscon_hv_config.h"
 
 #define IS_WRITE_TO_FLASH_ENABLED 1
 
