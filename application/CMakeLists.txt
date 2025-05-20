@@ -6,7 +6,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(puf_vm)
 
 target_sources(app PRIVATE src/main.c
-                           src/puf_prover.c
+                           src/puf/puf_prover.c
                            src/flash_handler.c
                            src/crosscon_hv/crosscon_hv_config.c
                            src/crosscon_hv/hv_functions.c
@@ -15,6 +15,7 @@ target_sources(app PRIVATE src/main.c
 include_directories(src/
                     src/crosscon_hv/
                     src/crosscon_hv/tee_mockcore/
+                    src/puf/
                     )
 
 # Include the fsl_puf driver in HAL_NXP
