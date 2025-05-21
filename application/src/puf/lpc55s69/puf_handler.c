@@ -139,7 +139,9 @@ int puf_get_key(uint8_t *puf_key)
     if (status != kStatus_Success)
     {
         printf("Error reconstructing intrinsic key!\r\n");
+        return status;
     }
+    return 0;
 }
 
 int puf_flush_key(uint8_t *puf_key)
@@ -154,4 +156,5 @@ int puf_flush_key(uint8_t *puf_key)
             return -1;
         }
     }
+    return 0;
 }
