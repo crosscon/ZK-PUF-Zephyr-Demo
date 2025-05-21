@@ -15,14 +15,6 @@
 #define STORAGE_PARTITION storage_partition
 #endif
 
-#ifndef PUF_KEY_SIZE
-#define PUF_KEY_SIZE 32         /* Multiples of 8, larger than kPUF_KeySizeM (8), less than kPUF_KeySizeMax (512) */
-#endif
-
-#ifndef PUF_KEY_CODE_SIZE
-#define PUF_KEY_CODE_SIZE PUF_GET_KEY_CODE_SIZE_FOR_KEY_SIZE(PUF_KEY_SIZE)
-#endif
-
 /* Define flash layout offsets within the partition */
 #define FLASH_OFFSET_ACTIVATION_CODE (PARTITION_OFFSET + 0)
 #define FLASH_SIZE_ACTIVATION_CODE   ALIGN_UP(PUF_ACTIVATION_CODE_SIZE, FLASH_WRITE_SIZE)

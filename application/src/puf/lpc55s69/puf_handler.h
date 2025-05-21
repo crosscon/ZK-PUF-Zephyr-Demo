@@ -2,9 +2,16 @@
 #define PUF_HANDLER_H
 
 #include "fsl_puf.h"
-#include "flash_handler.h"
 
 #define GENERATE_PUF_STUFF 1
+
+#ifndef PUF_KEY_SIZE
+#define PUF_KEY_SIZE 32         /* Multiples of 8, larger than kPUF_KeySizeM (8), less than kPUF_KeySizeMax (512) */
+#endif
+
+#ifndef PUF_KEY_CODE_SIZE
+#define PUF_KEY_CODE_SIZE PUF_GET_KEY_CODE_SIZE_FOR_KEY_SIZE(PUF_KEY_SIZE)
+#endif
 
 extern uint8_t hardcoded_activation_code[PUF_ACTIVATION_CODE_SIZE];
 extern uint8_t hardcoded_key_code[PUF_KEY_CODE_SIZE];
