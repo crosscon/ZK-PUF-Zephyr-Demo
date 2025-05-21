@@ -1,4 +1,7 @@
 #include "hv_functions.h"
+#include "puf_prover.h"
+
+bool has_been_initialized = false;
 
 const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
     {
@@ -9,7 +12,7 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0x88, 0x99, 0xAA, 0xBB,   /* clockSeq   */
             0xCC, 0xDD, 0xEE, 0xFF    /* node       */
         },
-        .handler = dummy_function_1,
+        .handler = PUF_TA_Init,
     },
     {
         .uuid = {
@@ -33,14 +36,25 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
     }
 };
 
-TEE_Result dummy_function_1(void){
+TEE_Result PUF_TA_Init(void){
+    uint8_t puf_key[PUF_KEY_SIZE];
+    init_puf();
+    has_been_initialized = true;
     return TEE_SUCCESS;
 }
 
 TEE_Result dummy_function_2(void){
-    return TEE_ERROR_GENERIC;
+    if(!has_been_initialized){
+        return TEE_ERROR_GENERIC;
+    } else {
+        return TEE_SUCCESS;
+    }
 }
 
 TEE_Result dummy_function_3(void){
-    return TEE_ERROR_CANCEL;
+    if(!has_been_initialized){
+        return TEE_ERROR_GENERIC;
+    } else {
+        return TEE_SUCCESS;
+    }
 }

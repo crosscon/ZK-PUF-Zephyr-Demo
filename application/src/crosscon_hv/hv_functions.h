@@ -8,6 +8,6 @@ typedef struct {
 #define FUNCTION_TABLE_SIZE 3
 extern const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE];
 
-TEE_Result dummy_function_1(void);
+TEE_Result PUF_TA_Init(void);
 TEE_Result dummy_function_2(void);
 TEE_Result dummy_function_3(void);
