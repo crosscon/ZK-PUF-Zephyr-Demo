@@ -37,8 +37,12 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
 };
 
 TEE_Result PUF_TA_Init(void){
+    int ret;
     uint8_t puf_key[PUF_KEY_SIZE];
-    init_puf();
+    ret = init_puf();
+    if (ret != 0) return TEE_ERROR_GENERIC;
+    ret = init_crypto();
+    if (ret != 0) return TEE_ERROR_GENERIC;
     has_been_initialized = true;
     return TEE_SUCCESS;
 }

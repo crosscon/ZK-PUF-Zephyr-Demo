@@ -11,12 +11,14 @@ target_sources(app PRIVATE src/main.c
                            src/flash_handler.c
                            src/crosscon_hv/crosscon_hv_config.c
                            src/crosscon_hv/hv_functions.c
+                           src/crypto/mbedtls/crypto_handler.c
                            )
 
 include_directories(src/
                     src/crosscon_hv/
                     src/crosscon_hv/tee_mockcore/
                     src/puf/lpc55s69
+                    src/crypto/mbedtls/
                     )
 
 # Include the fsl_puf driver in HAL_NXP
