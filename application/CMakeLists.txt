@@ -6,7 +6,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(puf_vm)
 
 target_sources(app PRIVATE src/main.c
-                           src/puf/lpc55s69/puf_prover.c
+                           src/puf/lpc55s69/puf_handler.c
                            src/puf/lpc55s69/puf_hardcoded_values.c
                            src/flash_handler.c
                            src/crosscon_hv/crosscon_hv_config.c

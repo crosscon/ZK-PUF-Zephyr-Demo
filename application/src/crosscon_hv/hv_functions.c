@@ -1,5 +1,5 @@
 #include "hv_functions.h"
-#include "puf_prover.h"
+#include "puf_handler.h"
 
 bool has_been_initialized = false;
 

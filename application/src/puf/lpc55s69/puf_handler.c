@@ -1,6 +1,6 @@
 #include <stdalign.h>
 #include <stdio.h>
-#include "puf_prover.h"
+#include "puf_handler.h"
 #include "flash_handler.h"
 
 /* These variables are global because while required to reconstruct PUF

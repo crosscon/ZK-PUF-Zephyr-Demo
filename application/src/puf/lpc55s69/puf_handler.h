@@ -1,5 +1,5 @@
-#ifndef PUF_PROVER_H
-#define PUF_PROVER_H
+#ifndef PUF_HANDLER_H
+#define PUF_HANDLER_H
 
 #include "fsl_puf.h"
 #include "flash_handler.h"
@@ -42,4 +42,4 @@ int puf_get_key(uint8_t *puf_key);
  */
 int puf_flush_key(uint8_t *puf_key);
 
-#endif /* PUF_PROVER_H */
+#endif /* PUF_HANDLER_H */

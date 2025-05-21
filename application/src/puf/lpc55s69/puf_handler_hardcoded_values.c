@@ -1,4 +1,4 @@
-#include "puf_prover.h"
+#include "puf_handler.h"
 
 uint8_t hardcoded_key_code[PUF_KEY_CODE_SIZE] =
 {
