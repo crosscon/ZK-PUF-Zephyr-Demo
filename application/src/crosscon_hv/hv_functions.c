@@ -1,5 +1,6 @@
 #include "hv_functions.h"
 #include "puf_handler.h"
+#include "puf_prover.h"
 
 bool has_been_initialized = false;
 
@@ -22,7 +23,7 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0x99, 0xAA, 0xBB, 0xCC,   /* clockSeq   */
             0xDD, 0xEE, 0xFF, 0x00    /* node       */
         },
-        .handler = dummy_function_2,
+        .handler = PUF_TA_GetCRP,
     },
     {
         .uuid = {
@@ -38,7 +39,6 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
 
 TEE_Result PUF_TA_Init(void){
     int ret;
-    uint8_t puf_key[PUF_KEY_SIZE];
     ret = init_puf();
     if (ret != 0) return TEE_ERROR_GENERIC;
     ret = init_crypto();
@@ -47,10 +47,14 @@ TEE_Result PUF_TA_Init(void){
     return TEE_SUCCESS;
 }
 
-TEE_Result dummy_function_2(void){
+TEE_Result PUF_TA_GetCRP(void){
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
     } else {
+        uint8_t response_1[RESPONSE_SIZE];
+        uint8_t response_2[RESPONSE_SIZE];
+        get_response_to_challenge(&hardcoded_challenge_1, &response_1);
+        get_response_to_challenge(&hardcoded_challenge_2, &response_1);
         return TEE_SUCCESS;
     }
 }

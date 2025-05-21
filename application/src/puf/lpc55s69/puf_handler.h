@@ -2,6 +2,7 @@
 #define PUF_HANDLER_H
 
 #include "fsl_puf.h"
+#include "puf_prover.h"
 
 #define GENERATE_PUF_STUFF 1
 
