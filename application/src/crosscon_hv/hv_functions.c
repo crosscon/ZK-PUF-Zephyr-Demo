@@ -2,6 +2,7 @@
 #include "puf_handler.h"
 #include "puf_prover.h"
 #include "crypto_handler.h"
+#include "crosscon_hv_config.h"
 
 bool has_been_initialized = false;
 
@@ -44,6 +45,9 @@ TEE_Result PUF_TA_Init(void){
     if (ret != 0) return TEE_ERROR_GENERIC;
     ret = init_crypto();
     if (ret != 0) return TEE_ERROR_GENERIC;
+    /* For now hardcoding/testing shmem reading */
+    memcpy(message[2], &hardcoded_challenge_1, CHALLENGE_SIZE);
+    memcpy(message[3], &hardcoded_challenge_2, CHALLENGE_SIZE);
     has_been_initialized = true;
     return TEE_SUCCESS;
 }
@@ -56,12 +60,16 @@ TEE_Result PUF_TA_GetCRP(void){
         mbedtls_mpi response_1;
         mbedtls_mpi response_2;
         mbedtls_ecp_point commitment;
+        uint8_t challenge_1[CHALLENGE_SIZE];
+        uint8_t challenge_2[CHALLENGE_SIZE];
+        memcpy(&challenge_1, message[2], CHALLENGE_SIZE);
+        memcpy(&challenge_2, message[3], CHALLENGE_SIZE);
         mbedtls_mpi_init(&response_1);
         mbedtls_mpi_init(&response_2);
 	mbedtls_ecp_point_init(&commitment);
-        ret = get_response_to_challenge(&hardcoded_challenge_1, &response_1);
+        ret = get_response_to_challenge(&challenge_1, &response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_response_to_challenge(&hardcoded_challenge_2, &response_2);
+        ret = get_response_to_challenge(&challenge_2, &response_2);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = get_commited_value(&response_1, &response_2, &commitment);
         mbedtls_mpi_free(&response_1);

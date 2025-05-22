@@ -1,3 +1,6 @@
+#ifndef CROSSCON_HV_CONFIG_H
+#define CROSSCON_HV_CONFIG_H
+
 #include <string.h>
 #include <stdint.h>
 #include <zephyr/irq.h>
@@ -46,3 +49,5 @@ extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
 
 void ipc_notify(int ipc_id, int event_id);
 void ipc_irq_handler(void);
+
+#endif // CROSSCON_HV_CONFIG_H
