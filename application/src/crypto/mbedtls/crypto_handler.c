@@ -48,6 +48,8 @@ int innner_init_ECC(mbedtls_ecp_group *grp, mbedtls_ecp_point *h, mbedtls_ecp_po
         return ret;
     }
 
+    mbedtls_ecp_copy( g, &grp->G );
+
     mbedtls_mpi x;
 	mbedtls_mpi_init(&x);
 	ret = mbedtls_mpi_lset(&x, CONSTANT_FOR_H_GENERATOR);

@@ -1,6 +1,7 @@
 #include "hv_functions.h"
 #include "puf_handler.h"
 #include "puf_prover.h"
+#include "crypto_handler.h"
 
 bool has_been_initialized = false;
 
@@ -51,10 +52,21 @@ TEE_Result PUF_TA_GetCRP(void){
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
     } else {
-        uint8_t response_1[RESPONSE_SIZE];
-        uint8_t response_2[RESPONSE_SIZE];
-        get_response_to_challenge(&hardcoded_challenge_1, &response_1);
-        get_response_to_challenge(&hardcoded_challenge_2, &response_1);
+        int ret;
+        mbedtls_mpi response_1;
+        mbedtls_mpi response_2;
+        mbedtls_ecp_point commitment;
+        mbedtls_mpi_init(&response_1);
+        mbedtls_mpi_init(&response_2);
+	mbedtls_ecp_point_init(&commitment);
+        ret = get_response_to_challenge(&hardcoded_challenge_1, &response_1);
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        ret = get_response_to_challenge(&hardcoded_challenge_2, &response_2);
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        ret = get_commited_value(&response_1, &response_2, &commitment);
+        mbedtls_mpi_free(&response_1);
+        mbedtls_mpi_free(&response_2);
+        if (ret != 0) return TEE_ERROR_GENERIC;
         return TEE_SUCCESS;
     }
 }
