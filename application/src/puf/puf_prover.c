@@ -1,29 +1,25 @@
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(PUF_VM);
+
 #include "puf_prover.h"
 
-int inner_print_ecp_point(const char *label, const mbedtls_ecp_point *P) {
-    size_t pt_len = 1 + 2 * ((grp.pbits + 7) / 8);
-    uint8_t *buf = malloc(pt_len);
-    if (!buf) {
-        printf("OOM allocating point buffer for %s\n", label);
-        return MBEDTLS_ERR_MPI_ALLOC_FAILED;
-    }
-
+int log_ecp_point(const char *label, const mbedtls_ecp_point *P)
+{
+    /* 1 + 2*ceil(pbits/8) is the max uncompressed length */
+    const size_t buf_max = 1 + 2 * ((grp.pbits + 7) / 8);
+    uint8_t buf[buf_max];
     size_t olen = 0;
+
     int ret = mbedtls_ecp_point_write_binary(&grp, P,
                                              MBEDTLS_ECP_PF_UNCOMPRESSED,
-                                             &olen, buf, pt_len);
+                                             &olen, buf, buf_max);
     if (ret != 0) {
-        printf("Error serializing point %s: -0x%04X\n", label, -ret);
-        free(buf);
+        LOG_ERR("Error: Serializing %s failed: -0x%04X", label, -ret);
         return ret;
     }
 
-    printf("%s (uncompressed, %zu bytes):\n", label, olen);
-    for (size_t i = 0; i < olen; i++)
-        printf("%02X", buf[i]);
-    printf("\n");
-
-    free(buf);
+    /* one-liner hexdump at DEBUG level */
+    LOG_HEXDUMP_DBG(buf, olen, label);
     return 0;
 }
 
@@ -36,7 +32,7 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
 
     ret = puf_get_key(&puf_key);
     if(ret!=0){
-        printf("Error While Getting Response From PUF");
+        LOG_ERR("Error: Can't Get Response From PUF");
         return ret;
     }
 
@@ -46,7 +42,7 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
 
     ret = puf_flush_key(&puf_key);
     if(ret!=0){
-        printf("Error While Flushing PUF from memory");
+        LOG_ERR("Error: Can't Flush PUF from memory");
         return ret;
     }
 
@@ -55,7 +51,7 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
 
     ret = mbedtls_mpi_read_binary(response, hash, sizeof(hash));
     if (ret != 0) {
-        printf("Error reading hash into MPI: -0x%04X\n", -ret);
+        LOG_ERR("Error: Can't read hash into MPI: -0x%04X\n", -ret);
         return ret;
     }
 
@@ -67,12 +63,10 @@ int get_commited_value(mbedtls_mpi *response_0, mbedtls_mpi *response_1, mbedtls
     int ret;
     ret = mbedtls_ecp_muladd(&grp, commitment, response_0, &g, response_1, &h);
     if(ret!=0){
-        printf("Error While Calculating Commitment");
-        printf("\r\n%d",ret);
+        LOG_ERR("Error: Can't Calculate Commitment");
         return ret;
     }
 
-    inner_print_ecp_point("Commitment", commitment);
     return 0;
 }
 
@@ -85,7 +79,7 @@ int extract_raw_commitment(mbedtls_ecp_point *commitment, uint8_t *raw_commitmen
 
     uint8_t *tmp = malloc(uncmp_len);
     if (!tmp) {
-        printf("OOM allocating temp buffer\n");
+        LOG_ERR("Error: OOM allocating temp buffer\n");
         return MBEDTLS_ERR_MPI_ALLOC_FAILED;
     }
 
@@ -94,7 +88,7 @@ int extract_raw_commitment(mbedtls_ecp_point *commitment, uint8_t *raw_commitmen
                                          &uncmp_len,
                                          tmp, uncmp_len);
     if (ret != 0) {
-        printf("Error serializing point: -0x%04X\n", -ret);
+        LOG_ERR("Error: Can't Serialize Point: -0x%04X\n", -ret);
         free(tmp);
         return ret;
     }

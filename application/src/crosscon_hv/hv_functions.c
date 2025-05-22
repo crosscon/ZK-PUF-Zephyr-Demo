@@ -1,3 +1,6 @@
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(PUF_VM);
+
 #include "hv_functions.h"
 #include "puf_handler.h"
 #include "puf_prover.h"
@@ -72,17 +75,26 @@ TEE_Result PUF_TA_get_commitment(void* shared_mem0, void* shared_mem1, void* sha
         return TEE_ERROR_GENERIC;
     } else {
         int ret;
+
         mbedtls_mpi response_0;
         mbedtls_mpi response_1;
         mbedtls_ecp_point commitment;
+
         uint8_t raw_commitment[64];
         uint8_t challenge_0[CHALLENGE_SIZE];
         uint8_t challenge_1[CHALLENGE_SIZE];
+
+        LOG_INF("Reading Challenges");
         memcpy(&challenge_0, shared_mem0, CHALLENGE_SIZE);
         memcpy(&challenge_1, shared_mem1, CHALLENGE_SIZE);
+        LOG_HEXDUMP_DBG(challenge_0, CHALLENGE_SIZE, "C1");
+        LOG_HEXDUMP_DBG(challenge_1, CHALLENGE_SIZE, "C2");
+
         mbedtls_mpi_init(&response_0);
         mbedtls_mpi_init(&response_1);
 	mbedtls_ecp_point_init(&commitment);
+
+        LOG_INF("Getting Responses and Calculating Commitment");
         ret = get_response_to_challenge(&challenge_0, &response_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = get_response_to_challenge(&challenge_1, &response_1);
@@ -91,7 +103,14 @@ TEE_Result PUF_TA_get_commitment(void* shared_mem0, void* shared_mem1, void* sha
         mbedtls_mpi_free(&response_0);
         mbedtls_mpi_free(&response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
+
+        log_ecp_point("COM = (R1*g)+(R2*h)", &commitment);
+
+        LOG_INF("Writing Commitment to Shared Memory");
         ret = extract_raw_commitment(&commitment, &raw_commitment);
+
+        LOG_HEXDUMP_DBG(raw_commitment, 64, "Raw COM to be written");
+
         if (ret != 0) return TEE_ERROR_GENERIC;
         memcpy(shared_mem0, raw_commitment +  0, 16);
         memcpy(shared_mem1, raw_commitment + 16, 16);
@@ -148,7 +167,12 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0, void* shared_mem1, void* shar
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = get_random_mpi(&random_val_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
+
+        log_mpi_hex("r", &random_val_0);
+        log_mpi_hex("u", &random_val_1);
+
         ret = get_commited_value(&random_val_0, &random_val_1, &proof_commitment);
+        log_ecp_point("P = (r*g)+(u*h)", &proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = extract_raw_commitment(&proof_commitment, &raw_proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
@@ -159,7 +183,7 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0, void* shared_mem1, void* shar
         ret = mbedtls_mpi_read_binary(&alpha, hash, sizeof(hash));
         if (ret != 0) return TEE_ERROR_GENERIC;
 
-        print_mpi_hex("alpha", &alpha);
+        log_mpi_hex("α = H(P,n)", &alpha);
 
         mbedtls_mpi_init(&response_0);
         mbedtls_mpi_init(&response_1);
@@ -171,17 +195,17 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0, void* shared_mem1, void* shar
         ret = mbedtls_mpi_mul_mpi(&mult_0, &alpha, &response_0);
         ret = mbedtls_mpi_mul_mpi(&mult_1, &alpha, &response_1);
 
-        print_mpi_hex("response", &response_0);
-        print_mpi_hex("response", &response_1);
+        log_mpi_hex("R1", &response_0);
+        log_mpi_hex("R2", &response_1);
 
-        print_mpi_hex("mult", &mult_0);
-        print_mpi_hex("mult", &mult_1);
+        log_mpi_hex("αR1", &mult_0);
+        log_mpi_hex("αR2", &mult_1);
 
         ret = mbedtls_mpi_add_mpi(&result_0, &random_val_0, &mult_0);
         ret = mbedtls_mpi_add_mpi(&result_1, &random_val_1, &mult_1);
 
-        print_mpi_hex("result", &result_0);
-        print_mpi_hex("result", &result_1);
+        log_mpi_hex("v = r+αR1", &result_0);
+        log_mpi_hex("w = u+αR2", &result_1);
 
         mbedtls_mpi_free(&response_0);
         mbedtls_mpi_free(&response_1);

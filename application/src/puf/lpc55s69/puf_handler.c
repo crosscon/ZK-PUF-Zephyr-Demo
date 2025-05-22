@@ -1,3 +1,6 @@
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(PUF_VM);
+
 #include <stdalign.h>
 #include <stdio.h>
 #include "puf_handler.h"
@@ -58,10 +61,10 @@ int inner_puf_init(void)
     PUF_GetDefaultConfig(&pufConfig);
     status = PUF_Init(PUF, &pufConfig);
     if (status != kStatus_Success) {
-        printf("Error: PUF initialization failed!\r\n");
+        LOG_ERR("Error: PUF initialization failed!");
         return status;
     }
-    printf("PUF Initialized Successfully.\r\n");
+    LOG_INF("PUF Initialized Successfully.");
     return 0;
 }
 
@@ -72,26 +75,21 @@ int inner_puf_create_ac(uint8_t *activation_code)
     status = PUF_Enroll(PUF, activation_code, PUF_ACTIVATION_CODE_SIZE);
 
     if (status != kStatus_Success) {
-        printf("\r\n%d %d\r\n", status, kStatus_Success);
-        printf("Error: PUF enrollment failed!\r\n");
+        LOG_ERR("Error: PUF enrollment failed!");
         return status;
     }
 
-    printf("PUF Enroll successful. Activation Code created.\r\n");
+    LOG_INF("PUF Enroll successful. Activation Code created.");
 
-    printf("Activation Code: ");
-    for (int i = 0; i < PUF_ACTIVATION_CODE_SIZE; i++) {
-        printf("%02X", activation_code[i]);
-    }
-    printf("\r\n");
+    LOG_HEXDUMP_DBG(activation_code, PUF_ACTIVATION_CODE_SIZE, "Activation Code");
 
     PUF_Deinit(PUF, &pufConfig);
     status = PUF_Init(PUF, &pufConfig);
     if (status != kStatus_Success) {
-        printf("Error: PUF reinitialization after enrollment failed!\r\n");
+        LOG_ERR("Error: PUF reinitialization after enrollment failed!");
         return status;
     }
-    printf("PUF Reinitialized after enrollment.\r\n");
+    LOG_INF("PUF Reinitialized after enrollment.");
 
     return 0;
 }
@@ -102,10 +100,10 @@ int inner_puf_start(uint8_t *activation_code)
     /* Start the PUF with the activation code */
     status = PUF_Start(PUF, activation_code, PUF_ACTIVATION_CODE_SIZE);
     if (status != kStatus_Success) {
-        printf("Error: PUF start failed!\r\n");
+        LOG_ERR("Error: PUF start failed!");
         return status;
     }
-    printf("PUF Started successfully.\r\n");
+    LOG_INF("PUF Started successfully.");
 
     return 0;
 }
@@ -115,18 +113,11 @@ int inner_puf_create_intrinsic_keycode(uint8_t *key_code)
     status_t status;
     status = PUF_SetIntrinsicKey(PUF, kPUF_KeyIndex_01, PUF_KEY_SIZE, key_code, PUF_KEY_CODE_SIZE);
     if (status != kStatus_Success) {
-        printf("PUF Intrinsic key 1 generation failed!\r\n");
-        printf("%d\r\n", status);
+        LOG_ERR("Error: PUF Intrinsic key 1 generation failed!");
         return status;
     }
 
-    printf("Intrinsic key code = \r\n");
-    for (int i = 0; i < PUF_KEY_CODE_SIZE; i++)
-    {
-        printf("%02X", key_code[i]);
-    }
-
-    printf("\r\n");
+    LOG_HEXDUMP_DBG(key_code, PUF_KEY_CODE_SIZE, "Intrinsic key code");
 
     return 0;
 }
@@ -138,7 +129,7 @@ int puf_get_key(uint8_t *puf_key)
     status = PUF_GetKey(PUF, key_code, PUF_KEY_CODE_SIZE, puf_key, PUF_KEY_SIZE);
     if (status != kStatus_Success)
     {
-        printf("Error reconstructing intrinsic key!\r\n");
+        LOG_ERR("Error: Failed reconstructing intrinsic key!");
         return status;
     }
     return 0;

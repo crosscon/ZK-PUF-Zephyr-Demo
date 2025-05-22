@@ -1,3 +1,6 @@
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(PUF_VM);
+
 #include "crypto_handler.h"
 
 #define CONSTANT_FOR_H_GENERATOR 123456789
@@ -13,16 +16,22 @@ int init_crypto()
     if (ret != 0) return ret;
 }
 
-void print_mpi_hex(const char *label, const mbedtls_mpi *X)
+void log_mpi_hex(const char *label, const mbedtls_mpi *X)
 {
-    char hexstr[130]; // Enough for 256-bit + null terminator
-    size_t olen = 0;
-    int ret = mbedtls_mpi_write_string(X, 16, hexstr, sizeof(hexstr), &olen);
-    if (ret == 0) {
-        printf("%s = 0x%s\n", label, hexstr);
-    } else {
-        printf("Error printing MPI %s: -0x%04X\n", label, -ret);
+    /* How many bytes we need to represent X in big-endian */
+    size_t n_bytes = mbedtls_mpi_size(X);
+    uint8_t  buf[n_bytes];
+    int      ret;
+
+    /* Serialize X into buf[] */
+    ret = mbedtls_mpi_write_binary(X, buf, n_bytes);
+    if (ret != 0) {
+        LOG_ERR("Error writing MPI %s: -0x%04X", label, -ret);
+        return;
     }
+
+    /* One call dumps buf[] as hex, prefixed by label: */
+    LOG_HEXDUMP_DBG(buf, n_bytes, label);
 }
 
 int rand_function(void *rng_state, unsigned char *output, size_t len) {
@@ -72,7 +81,7 @@ int innner_init_ECC(mbedtls_ecp_group *grp, mbedtls_ecp_point *h, mbedtls_ecp_po
     ret = mbedtls_ecp_group_load(grp, MBEDTLS_ECP_DP_SECP256R1);
 
     if (ret != 0) {
-        printf("Failed to load EC group");
+        LOG_ERR("Error: Failed to load EC group");
         return ret;
     }
 
@@ -83,14 +92,14 @@ int innner_init_ECC(mbedtls_ecp_group *grp, mbedtls_ecp_point *h, mbedtls_ecp_po
 	ret = mbedtls_mpi_lset(&x, CONSTANT_FOR_H_GENERATOR);
 
      if (ret != 0) {
-        printf("Failed to set X");
+        LOG_ERR("Error: Failed to set X");
         return ret;
     }
 
     ret = mbedtls_ecp_mul(grp, h, &x, &grp->G, rand_function, NULL);
 
     if (ret != 0) {
-        printf("Failed to generate h point");
+        LOG_ERR("Error: Failed to generate h point");
         return ret;
     }
 
