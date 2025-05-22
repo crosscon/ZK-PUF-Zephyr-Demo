@@ -76,17 +76,21 @@ TEE_Result PUF_TA_init(void* shared_mem0,
                        void* shared_mem7
                        )
 {
-    int ret;
-    ret = init_puf();
-    if (ret != 0) return TEE_ERROR_GENERIC;
-    ret = init_crypto();
-    if (ret != 0) return TEE_ERROR_GENERIC;
-    /* For now hardcoding/testing shmem reading */
-    memcpy(shared_mem0, &hardcoded_challenge_0, CHALLENGE_SIZE);
-    memcpy(shared_mem1, &hardcoded_challenge_1, CHALLENGE_SIZE);
-    memcpy(shared_mem2, &hardcoded_challenge_1, NONCE_SIZE);
-    has_been_initialized = true;
-    return TEE_SUCCESS;
+    if(!has_been_initialized){
+        int ret;
+        ret = init_puf();
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        ret = init_crypto();
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        /* For now hardcoding/testing shmem reading */
+        memcpy(shared_mem0, &hardcoded_challenge_0, CHALLENGE_SIZE);
+        memcpy(shared_mem1, &hardcoded_challenge_1, CHALLENGE_SIZE);
+        memcpy(shared_mem2, &hardcoded_challenge_1, NONCE_SIZE);
+        has_been_initialized = true;
+        return TEE_SUCCESS;
+    } else {
+        return TEE_ERROR_GENERIC;
+    }
 }
 
 TEE_Result PUF_TA_get_commitment(void* shared_mem0,
