@@ -21,13 +21,25 @@
 #define MESSAGE1_SIZE       ((const size_t)(0x4))  //32-bit/4-byte - place for TEEC_Result
 #define MESSAGE1_OFFSET     MESSAGE0_OFFSET + MESSAGE0_SIZE
 
-#define MESSAGE2_SIZE       ((const size_t)(VMS_IPC_SIZE - MESSAGE0_SIZE - MESSAGE1_SIZE)) //Ugly, WIP
+#define MESSAGE2_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 1
 #define MESSAGE2_OFFSET     MESSAGE1_OFFSET + MESSAGE1_SIZE
 
-static char* const message[3] = {
+#define MESSAGE3_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 2
+#define MESSAGE3_OFFSET     MESSAGE2_OFFSET + MESSAGE2_SIZE
+
+#define MESSAGE4_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 3
+#define MESSAGE4_OFFSET     MESSAGE3_OFFSET + MESSAGE3_SIZE
+
+#define MESSAGE5_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 4
+#define MESSAGE5_OFFSET     MESSAGE4_OFFSET + MESSAGE4_SIZE
+
+static char* const message[6] = {
     (const char*)(MESSAGE0_OFFSET),
     (const char*)(MESSAGE1_OFFSET),
     (const char*)(MESSAGE2_OFFSET),
+    (const char*)(MESSAGE3_OFFSET),
+    (const char*)(MESSAGE4_OFFSET),
+    (const char*)(MESSAGE5_OFFSET),
 };
 
 extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
