@@ -12,5 +12,7 @@ extern mbedtls_ecp_point h;
 extern mbedtls_ecp_point g;
 
 int init_crypto(void);
+int get_random_mpi(mbedtls_mpi *X);
+void print_mpi_hex(const char *label, const mbedtls_mpi *X);
 
 #endif /* CRYPTO_HANDLER_H */

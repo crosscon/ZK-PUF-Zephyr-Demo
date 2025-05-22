@@ -6,6 +6,8 @@
 
 #define CHALLENGE_SIZE 16
 
+#define NONCE_SIZE 16
+
 #ifndef PUF_KEY_SIZE
 #define PUF_KEY_SIZE 32
 #endif

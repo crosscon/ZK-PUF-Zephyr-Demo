@@ -1,16 +1,5 @@
 #include "puf_prover.h"
 
-void inner_print_mpi_hex(const char *label, const mbedtls_mpi *X) {
-    char hexstr[66]; // Enough for 256-bit + null terminator
-    size_t olen = 0;
-    int ret = mbedtls_mpi_write_string(X, 16, hexstr, sizeof(hexstr), &olen);
-    if (ret == 0) {
-        printf("%s = 0x%s\n", label, hexstr);
-    } else {
-        printf("Error printing MPI %s: -0x%04X\n", label, -ret);
-    }
-}
-
 int inner_print_ecp_point(const char *label, const mbedtls_ecp_point *P) {
     size_t pt_len = 1 + 2 * ((grp.pbits + 7) / 8);
     uint8_t *buf = malloc(pt_len);
@@ -69,8 +58,6 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
         printf("Error reading hash into MPI: -0x%04X\n", -ret);
         return ret;
     }
-
-    inner_print_mpi_hex("Response MPI", response);
 
     return 0;
 }

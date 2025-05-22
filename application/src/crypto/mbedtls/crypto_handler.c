@@ -13,6 +13,18 @@ int init_crypto()
     if (ret != 0) return ret;
 }
 
+void print_mpi_hex(const char *label, const mbedtls_mpi *X)
+{
+    char hexstr[130]; // Enough for 256-bit + null terminator
+    size_t olen = 0;
+    int ret = mbedtls_mpi_write_string(X, 16, hexstr, sizeof(hexstr), &olen);
+    if (ret == 0) {
+        printf("%s = 0x%s\n", label, hexstr);
+    } else {
+        printf("Error printing MPI %s: -0x%04X\n", label, -ret);
+    }
+}
+
 int rand_function(void *rng_state, unsigned char *output, size_t len) {
 
     size_t use_len;
@@ -33,6 +45,22 @@ int rand_function(void *rng_state, unsigned char *output, size_t len) {
 	}
 
 	return (0);
+}
+
+int get_random_mpi(mbedtls_mpi *X)
+{
+    int ret;
+    size_t n_bytes = mbedtls_mpi_size(&grp.N);
+
+    mbedtls_mpi_init(X);
+
+    if ((ret = mbedtls_mpi_fill_random(X,
+                                       n_bytes,
+                                       rand_function,
+                                       NULL)) != 0)
+        return ret;
+
+    return mbedtls_mpi_mod_mpi(X, X, &grp.N);
 }
 
 int innner_init_ECC(mbedtls_ecp_group *grp, mbedtls_ecp_point *h, mbedtls_ecp_point *g )
