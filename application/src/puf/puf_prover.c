@@ -1,5 +1,43 @@
 #include "puf_prover.h"
 
+void inner_print_mpi_hex(const char *label, const mbedtls_mpi *X) {
+    char hexstr[66]; // Enough for 256-bit + null terminator
+    size_t olen = 0;
+    int ret = mbedtls_mpi_write_string(X, 16, hexstr, sizeof(hexstr), &olen);
+    if (ret == 0) {
+        printf("%s = 0x%s\n", label, hexstr);
+    } else {
+        printf("Error printing MPI %s: -0x%04X\n", label, -ret);
+    }
+}
+
+int inner_print_ecp_point(const char *label, const mbedtls_ecp_point *P) {
+    size_t pt_len = 1 + 2 * ((grp.pbits + 7) / 8);
+    uint8_t *buf = malloc(pt_len);
+    if (!buf) {
+        printf("OOM allocating point buffer for %s\n", label);
+        return MBEDTLS_ERR_MPI_ALLOC_FAILED;
+    }
+
+    size_t olen = 0;
+    int ret = mbedtls_ecp_point_write_binary(&grp, P,
+                                             MBEDTLS_ECP_PF_UNCOMPRESSED,
+                                             &olen, buf, pt_len);
+    if (ret != 0) {
+        printf("Error serializing point %s: -0x%04X\n", label, -ret);
+        free(buf);
+        return ret;
+    }
+
+    printf("%s (uncompressed, %zu bytes):\n", label, olen);
+    for (size_t i = 0; i < olen; i++)
+        printf("%02X", buf[i]);
+    printf("\n");
+
+    free(buf);
+    return 0;
+}
+
 int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
 {
     int ret;
@@ -32,22 +70,7 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
         return ret;
     }
 
-    /* 6) debug‐print the MPI as hex */
-    {
-        /* 64 digits for 256-bit SHA + NULL + optional +/- sign */
-        char hexstr[66];
-        size_t olen = 0;
-        ret = mbedtls_mpi_write_string(response,
-                                       16,      /* radix = hex */
-                                       hexstr,
-                                       sizeof(hexstr),
-                                       &olen);
-        if (ret == 0) {
-            printf("Response MPI = 0x%s\n", hexstr);
-        } else {
-            printf("Error writing MPI to string: -0x%04X\n", -ret);
-        }
-    }
+    inner_print_mpi_hex("Response MPI", response);
 
     return 0;
 }
@@ -62,34 +85,34 @@ int get_commited_value(mbedtls_mpi *response_0, mbedtls_mpi *response_1, mbedtls
         return ret;
     }
 
-    /* 2) serialize to uncompressed binary form */
-    size_t olen;
-    /* group size in bytes = (bitlen + 7) / 8 */
-    size_t pt_len = 1 + 2 * ((grp.pbits + 7) / 8);
-    uint8_t *buf = malloc( pt_len );
-    if( buf == NULL ) {
-        printf( "OOM allocating point buffer\n" );
+    inner_print_ecp_point("Commitment", commitment);
+    return 0;
+}
+
+// Writes raw 64-byte commitment (X || Y) into `raw_commitment`.
+int extract_raw_commitment(mbedtls_ecp_point *commitment, uint8_t *raw_commitment)
+{
+    int ret;
+    size_t coord_len = (grp.pbits + 7) / 8;        // typically 32
+    size_t uncmp_len = 1 + 2 * coord_len;          // prefix + X + Y
+
+    uint8_t *tmp = malloc(uncmp_len);
+    if (!tmp) {
+        printf("OOM allocating temp buffer\n");
         return MBEDTLS_ERR_MPI_ALLOC_FAILED;
     }
 
-    ret = mbedtls_ecp_point_write_binary( &grp,
-                                          commitment,
-                                          MBEDTLS_ECP_PF_UNCOMPRESSED,
-                                          &olen,
-                                          buf,
-                                          pt_len );
-    if( ret != 0 ) {
-        printf( "Error serializing point: -0x%04X\n", -ret );
-        free(buf);
+    ret = mbedtls_ecp_point_write_binary(&grp, commitment,
+                                         MBEDTLS_ECP_PF_UNCOMPRESSED,
+                                         &uncmp_len,
+                                         tmp, uncmp_len);
+    if (ret != 0) {
+        printf("Error serializing point: -0x%04X\n", -ret);
+        free(tmp);
         return ret;
     }
 
-    /* 3) hex-print the buffer */
-    printf( "Commitment (uncompressed = %zu bytes):\n", olen );
-    for( size_t i = 0; i < olen; i++ )
-        printf( "%02X", buf[i] );
-    printf( "\n" );
-
-    free(buf);
+    memcpy(raw_commitment, tmp + 1, 2 * coord_len);
+    free(tmp);
     return 0;
 }
