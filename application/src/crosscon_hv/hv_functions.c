@@ -59,8 +59,8 @@ TEE_Result PUF_TA_Init(void* shared_mem0, void* shared_mem1, void* shared_mem2, 
     ret = init_crypto();
     if (ret != 0) return TEE_ERROR_GENERIC;
     /* For now hardcoding/testing shmem reading */
-    memcpy(shared_mem0, &hardcoded_challenge_1, CHALLENGE_SIZE);
-    memcpy(shared_mem1, &hardcoded_challenge_2, CHALLENGE_SIZE);
+    memcpy(shared_mem0, &hardcoded_challenge_0, CHALLENGE_SIZE);
+    memcpy(shared_mem1, &hardcoded_challenge_1, CHALLENGE_SIZE);
     has_been_initialized = true;
     return TEE_SUCCESS;
 }
@@ -71,23 +71,23 @@ TEE_Result PUF_TA_GetCRP(void* shared_mem0, void* shared_mem1, void* shared_mem2
         return TEE_ERROR_GENERIC;
     } else {
         int ret;
+        mbedtls_mpi response_0;
         mbedtls_mpi response_1;
-        mbedtls_mpi response_2;
         mbedtls_ecp_point commitment;
+        uint8_t challenge_0[CHALLENGE_SIZE];
         uint8_t challenge_1[CHALLENGE_SIZE];
-        uint8_t challenge_2[CHALLENGE_SIZE];
-        memcpy(&challenge_1, shared_mem0, CHALLENGE_SIZE);
-        memcpy(&challenge_2, shared_mem1, CHALLENGE_SIZE);
+        memcpy(&challenge_0, shared_mem0, CHALLENGE_SIZE);
+        memcpy(&challenge_1, shared_mem1, CHALLENGE_SIZE);
+        mbedtls_mpi_init(&response_0);
         mbedtls_mpi_init(&response_1);
-        mbedtls_mpi_init(&response_2);
 	mbedtls_ecp_point_init(&commitment);
+        ret = get_response_to_challenge(&challenge_0, &response_0);
+        if (ret != 0) return TEE_ERROR_GENERIC;
         ret = get_response_to_challenge(&challenge_1, &response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_response_to_challenge(&challenge_2, &response_2);
-        if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_commited_value(&response_1, &response_2, &commitment);
+        ret = get_commited_value(&response_0, &response_1, &commitment);
+        mbedtls_mpi_free(&response_0);
         mbedtls_mpi_free(&response_1);
-        mbedtls_mpi_free(&response_2);
         if (ret != 0) return TEE_ERROR_GENERIC;
         return TEE_SUCCESS;
     }

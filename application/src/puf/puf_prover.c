@@ -52,10 +52,10 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
     return 0;
 }
 
-int get_commited_value(mbedtls_mpi *response_1, mbedtls_mpi *response_2, mbedtls_ecp_point *commitment)
+int get_commited_value(mbedtls_mpi *response_0, mbedtls_mpi *response_1, mbedtls_ecp_point *commitment)
 {
     int ret;
-    ret = mbedtls_ecp_muladd(&grp, commitment, response_1, &g, response_2, &h);
+    ret = mbedtls_ecp_muladd(&grp, commitment, response_0, &g, response_1, &h);
     if(ret!=0){
         printf("Error While Calculating Commitment");
         printf("\r\n%d",ret);
