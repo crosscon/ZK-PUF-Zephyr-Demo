@@ -43,7 +43,7 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0xAA, 0xBB, 0xCC, 0xDD,   /* clockSeq   */
             0xEE, 0xFF, 0x00, 0x11    /* node       */
         },
-        .handler = dummy_function_3,
+        .handler = PUF_TA_get_ZK_proofs,
         .arg0    = message[2],
         .arg1    = message[3],
         .arg2    = message[4],
@@ -100,11 +100,26 @@ TEE_Result PUF_TA_get_commitment(void* shared_mem0, void* shared_mem1, void* sha
     }
 }
 
-TEE_Result dummy_function_3(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
 {
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
     } else {
-        return TEE_SUCCESS;
+        int ret;
+        mbedtls_mpi response_0;
+        mbedtls_mpi response_1;
+        uint8_t challenge_0[CHALLENGE_SIZE];
+        uint8_t challenge_1[CHALLENGE_SIZE];
+        memcpy(&challenge_0, shared_mem0, CHALLENGE_SIZE);
+        memcpy(&challenge_1, shared_mem1, CHALLENGE_SIZE);
+        mbedtls_mpi_init(&response_0);
+        mbedtls_mpi_init(&response_1);
+        ret = get_response_to_challenge(&challenge_0, &response_0);
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        ret = get_response_to_challenge(&challenge_1, &response_1);
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        /* ZK generation logic here */
+        mbedtls_mpi_free(&response_0);
+        mbedtls_mpi_free(&response_1);
     }
 }
