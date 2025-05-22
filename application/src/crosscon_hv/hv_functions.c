@@ -23,6 +23,10 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
         .arg1    = message[3],
         .arg2    = message[4],
         .arg3    = message[5],
+        .arg4    = message[6],
+        .arg5    = message[7],
+        .arg6    = message[8],
+        .arg7    = message[9],
     },
     {
         .uuid = {
@@ -37,6 +41,10 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
         .arg1    = message[3],
         .arg2    = message[4],
         .arg3    = message[5],
+        .arg4    = message[6],
+        .arg5    = message[7],
+        .arg6    = message[8],
+        .arg7    = message[9],
     },
     {
         .uuid = {
@@ -51,10 +59,22 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
         .arg1    = message[3],
         .arg2    = message[4],
         .arg3    = message[5],
+        .arg4    = message[6],
+        .arg5    = message[7],
+        .arg6    = message[8],
+        .arg7    = message[9],
     }
 };
 
-TEE_Result PUF_TA_init(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+TEE_Result PUF_TA_init(void* shared_mem0,
+                       void* shared_mem1,
+                       void* shared_mem2,
+                       void* shared_mem3,
+                       void* shared_mem4,
+                       void* shared_mem5,
+                       void* shared_mem6,
+                       void* shared_mem7
+                       )
 {
     int ret;
     ret = init_puf();
@@ -69,7 +89,15 @@ TEE_Result PUF_TA_init(void* shared_mem0, void* shared_mem1, void* shared_mem2, 
     return TEE_SUCCESS;
 }
 
-TEE_Result PUF_TA_get_commitment(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+TEE_Result PUF_TA_get_commitment(void* shared_mem0,
+                                 void* shared_mem1,
+                                 void* shared_mem2,
+                                 void* shared_mem3,
+                                 void* shared_mem4,
+                                 void* shared_mem5,
+                                 void* shared_mem6,
+                                 void* shared_mem7
+                                 )
 {
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
@@ -120,7 +148,15 @@ TEE_Result PUF_TA_get_commitment(void* shared_mem0, void* shared_mem1, void* sha
     }
 }
 
-TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
+                                void* shared_mem1,
+                                void* shared_mem2,
+                                void* shared_mem3,
+                                void* shared_mem4,
+                                void* shared_mem5,
+                                void* shared_mem6,
+                                void* shared_mem7
+                                )
 {
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
@@ -146,6 +182,9 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0, void* shared_mem1, void* shar
         mbedtls_mpi result_1;
         mbedtls_mpi_init(&result_0);
         mbedtls_mpi_init(&result_1);
+
+        uint8_t raw_result0[64];
+        uint8_t raw_result1[64];
 
         mbedtls_mpi response_0;
         mbedtls_mpi response_1;
@@ -212,6 +251,22 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0, void* shared_mem1, void* shar
 
         mbedtls_mpi_free(&mult_0);
         mbedtls_mpi_free(&mult_1);
+
+        mbedtls_mpi_write_binary(&result_0, raw_result0, 64);
+        mbedtls_mpi_write_binary(&result_1, raw_result1, 64);
+
+        LOG_HEXDUMP_DBG(raw_result0, 64, "Raw v to be written");
+        LOG_HEXDUMP_DBG(raw_result1, 64, "Raw w to be written");
+
+        memcpy(shared_mem0, raw_result0 +  0, 16);
+        memcpy(shared_mem1, raw_result0 + 16, 16);
+        memcpy(shared_mem2, raw_result0 + 32, 16);
+        memcpy(shared_mem3, raw_result0 + 48, 16);
+        memcpy(shared_mem4, raw_result1 +  0, 16);
+        memcpy(shared_mem5, raw_result1 + 16, 16);
+        memcpy(shared_mem6, raw_result1 + 32, 16);
+        memcpy(shared_mem7, raw_result1 + 48, 16);
+
         return TEE_SUCCESS;
     }
 }

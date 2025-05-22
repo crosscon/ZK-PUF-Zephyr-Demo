@@ -30,7 +30,11 @@ void ipc_irq_handler(void)
                          function_table[i].arg0,
                          function_table[i].arg1,
                          function_table[i].arg2,
-                         function_table[i].arg3
+                         function_table[i].arg3,
+                         function_table[i].arg4,
+                         function_table[i].arg5,
+                         function_table[i].arg6,
+                         function_table[i].arg7
                      );
             memcpy(message[1], &result, sizeof(result));
             ipc_notify(0, 0);
