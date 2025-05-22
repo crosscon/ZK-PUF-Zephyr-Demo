@@ -15,7 +15,7 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0x88, 0x99, 0xAA, 0xBB,   /* clockSeq   */
             0xCC, 0xDD, 0xEE, 0xFF    /* node       */
         },
-        .handler = PUF_TA_Init,
+        .handler = PUF_TA_init,
         .arg0    = message[2],
         .arg1    = message[3],
         .arg2    = message[4],
@@ -29,7 +29,7 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0x99, 0xAA, 0xBB, 0xCC,   /* clockSeq   */
             0xDD, 0xEE, 0xFF, 0x00    /* node       */
         },
-        .handler = PUF_TA_GetCRP,
+        .handler = PUF_TA_get_commitment,
         .arg0    = message[2],
         .arg1    = message[3],
         .arg2    = message[4],
@@ -51,7 +51,7 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
     }
 };
 
-TEE_Result PUF_TA_Init(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+TEE_Result PUF_TA_init(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
 {
     int ret;
     ret = init_puf();
@@ -65,7 +65,7 @@ TEE_Result PUF_TA_Init(void* shared_mem0, void* shared_mem1, void* shared_mem2, 
     return TEE_SUCCESS;
 }
 
-TEE_Result PUF_TA_GetCRP(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+TEE_Result PUF_TA_get_commitment(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
 {
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
