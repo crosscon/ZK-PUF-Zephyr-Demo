@@ -36,6 +36,14 @@ void ipc_irq_handler(void)
                          function_table[i].arg6,
                          function_table[i].arg7
                      );
+
+            if (result != TEE_SUCCESS)
+            {
+                LOG_WRN("Non-success Error Code Returned");
+            }
+            else{
+                LOG_INF("Interrupt Handled");
+            }
             memcpy(message[1], &result, sizeof(result));
             ipc_notify(0, 0);
             return;  /* once handled, bail out */
