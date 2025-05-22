@@ -16,6 +16,10 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0xCC, 0xDD, 0xEE, 0xFF    /* node       */
         },
         .handler = PUF_TA_Init,
+        .arg0    = message[2],
+        .arg1    = message[3],
+        .arg2    = message[4],
+        .arg3    = message[5],
     },
     {
         .uuid = {
@@ -26,6 +30,10 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0xDD, 0xEE, 0xFF, 0x00    /* node       */
         },
         .handler = PUF_TA_GetCRP,
+        .arg0    = message[2],
+        .arg1    = message[3],
+        .arg2    = message[4],
+        .arg3    = message[5],
     },
     {
         .uuid = {
@@ -36,23 +44,29 @@ const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
             0xEE, 0xFF, 0x00, 0x11    /* node       */
         },
         .handler = dummy_function_3,
+        .arg0    = message[2],
+        .arg1    = message[3],
+        .arg2    = message[4],
+        .arg3    = message[5],
     }
 };
 
-TEE_Result PUF_TA_Init(void){
+TEE_Result PUF_TA_Init(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+{
     int ret;
     ret = init_puf();
     if (ret != 0) return TEE_ERROR_GENERIC;
     ret = init_crypto();
     if (ret != 0) return TEE_ERROR_GENERIC;
     /* For now hardcoding/testing shmem reading */
-    memcpy(message[2], &hardcoded_challenge_1, CHALLENGE_SIZE);
-    memcpy(message[3], &hardcoded_challenge_2, CHALLENGE_SIZE);
+    memcpy(shared_mem0, &hardcoded_challenge_1, CHALLENGE_SIZE);
+    memcpy(shared_mem1, &hardcoded_challenge_2, CHALLENGE_SIZE);
     has_been_initialized = true;
     return TEE_SUCCESS;
 }
 
-TEE_Result PUF_TA_GetCRP(void){
+TEE_Result PUF_TA_GetCRP(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+{
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
     } else {
@@ -62,8 +76,8 @@ TEE_Result PUF_TA_GetCRP(void){
         mbedtls_ecp_point commitment;
         uint8_t challenge_1[CHALLENGE_SIZE];
         uint8_t challenge_2[CHALLENGE_SIZE];
-        memcpy(&challenge_1, message[2], CHALLENGE_SIZE);
-        memcpy(&challenge_2, message[3], CHALLENGE_SIZE);
+        memcpy(&challenge_1, shared_mem0, CHALLENGE_SIZE);
+        memcpy(&challenge_2, shared_mem1, CHALLENGE_SIZE);
         mbedtls_mpi_init(&response_1);
         mbedtls_mpi_init(&response_2);
 	mbedtls_ecp_point_init(&commitment);
@@ -79,7 +93,8 @@ TEE_Result PUF_TA_GetCRP(void){
     }
 }
 
-TEE_Result dummy_function_3(void){
+TEE_Result dummy_function_3(void* shared_mem0, void* shared_mem1, void* shared_mem2, void* shared_mem3)
+{
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
     } else {

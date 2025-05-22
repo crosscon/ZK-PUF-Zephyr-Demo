@@ -22,26 +22,27 @@ void print_hex(const char* label, const void* data, size_t len) {
 
 void ipc_irq_handler(void)
 {
-    uint8_t   received_uuid[TEE_UUID_LEN];
+    uint8_t    received_uuid[TEE_UUID_LEN];
     TEE_Result result = TEE_ERROR_GENERIC;
 
-    /* Copy the UUID from shared memory */
-    memcpy(&received_uuid, message[0], sizeof(received_uuid));
-    print_hex("Received UUID", &received_uuid, sizeof(received_uuid));
+    memcpy(received_uuid, message[0], sizeof(received_uuid));
+    print_hex("Received UUID", received_uuid, sizeof(received_uuid));
 
-    /* Iterate and compare contents of each entry */
     for (int i = 0; i < FUNCTION_TABLE_SIZE; i++) {
-        if (memcmp(&received_uuid,
+        if (memcmp(received_uuid,
                    function_table[i].uuid,
                    sizeof(received_uuid)) == 0) {
-            /* Call handler and capture the result */
             printf("UUID matched entry %d; calling handler…\n", i);
-            result = function_table[i].handler();
-            /* Write the return code and inform that interrupt got handled */
+            result = function_table[i].handler(
+                         function_table[i].arg0,
+                         function_table[i].arg1,
+                         function_table[i].arg2,
+                         function_table[i].arg3
+                     );
             memcpy(message[1], &result, sizeof(result));
-            ipc_notify(0,0);
-        } else {
-            printf("No matching UUID in table.\n");
+            ipc_notify(0, 0);
+            return;  /* once handled, bail out */
         }
     }
+    printf("No matching UUID in table.\n");
 }
