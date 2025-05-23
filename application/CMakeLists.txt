@@ -9,7 +9,6 @@ target_sources(app PRIVATE src/main.c
                            src/puf/lpc55s69/puf_handler.c
                            src/puf/lpc55s69/puf_handler_hardcoded_values.c
                            src/puf/puf_prover.c
-                           src/puf/puf_prover_hardcoded_values.c
                            src/flash_handler.c
                            src/crosscon_hv/crosscon_hv_config.c
                            src/crosscon_hv/hv_functions.c
