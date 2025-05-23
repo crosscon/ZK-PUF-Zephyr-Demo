@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
+"""
+hex_to_array.py: Convert Zephyr debug hex dumps to C uint8_t arrays or strings.
+
+Usage:
+  # Uppercase hex string:
+  python hex_to_array.py -U <input_file>
+
+  # C-style array (default name 'keyCode'):
+  python hex_to_array.py -C [-n VAR_NAME] <input_file>
+
+Modes:
+  -U, --upper   Emit a single uppercase hex string.
+  -C, --carray  Emit a formatted C array.
+  -n, --name    (Only for -C) Set the C array variable name.
+
+Input format:
+  Lines containing two-digit hex bytes, e.g.
+     0c 40 f5 ff 9d 5a be fc  c6 9f 84 0d f2 46 84 96 |.@...Z.. .....F..
+     cf 8c 47 eb 30 6d 4d 20  2f f5 d3 7c 71 99 3e 13 |..G.0mM  /..|q.>.
+  Anything after ‘|’ is ignored.
+"""
 import sys
 import re
 import textwrap
 import argparse
 
 def print_help():
-    print(textwrap.dedent("""
-    Usage:
-      # Uppercase hex string:
-      python hex_tool.py -U <input_file>
-
-      # C-style array (default name 'keyCode'):
-      python hex_tool.py -C [-n VAR_NAME] <input_file>
-
-    Input format:
-      Lines containing two-digit hex bytes, e.g.
-         0c 40 f5 ff 9d 5a be fc  c6 9f 84 0d f2 46 84 96 |.@...Z.. .....F..
-         cf 8c 47 eb 30 6d 4d 20  2f f5 d3 7c 71 99 3e 13 |..G.0mM  /..|q.>.
-      Anything after ‘|’ is ignored.
-
-    Modes:
-      -U, --upper   Emit a single uppercase hex string.
-      -C, --carray  Emit a formatted C array.
-      -n, --name    (Only for -C) Set the C array variable name.
-    """))
+    print(__doc__)
 
 def read_input(path):
     data = sys.stdin.read() if path == '-' else open(path, 'r', encoding='utf-8').read()
