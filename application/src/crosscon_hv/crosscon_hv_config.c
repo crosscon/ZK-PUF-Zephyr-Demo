@@ -34,7 +34,11 @@ void ipc_irq_handler(void)
                          function_table[i].arg4,
                          function_table[i].arg5,
                          function_table[i].arg6,
-                         function_table[i].arg7
+                         function_table[i].arg7,
+                         function_table[i].arg8,
+                         function_table[i].arg9,
+                         function_table[i].arg10,
+                         function_table[i].arg11
                      );
 
             if (result != TEE_SUCCESS)

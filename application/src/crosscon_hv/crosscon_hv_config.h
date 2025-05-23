@@ -47,7 +47,19 @@
 #define MESSAGE9_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 8
 #define MESSAGE9_OFFSET     MESSAGE8_OFFSET + MESSAGE8_SIZE
 
-static char* const message[10] = {
+#define MESSAGE10_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 9
+#define MESSAGE10_OFFSET     MESSAGE9_OFFSET + MESSAGE9_SIZE
+
+#define MESSAGE11_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 10
+#define MESSAGE11_OFFSET     MESSAGE10_OFFSET + MESSAGE10_SIZE
+
+#define MESSAGE12_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 11
+#define MESSAGE12_OFFSET     MESSAGE11_OFFSET + MESSAGE11_SIZE
+
+#define MESSAGE13_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 12
+#define MESSAGE13_OFFSET     MESSAGE12_OFFSET + MESSAGE12_SIZE
+
+static char* const message[14] = {
     (const char*)(MESSAGE0_OFFSET),
     (const char*)(MESSAGE1_OFFSET),
     (const char*)(MESSAGE2_OFFSET),
@@ -58,6 +70,10 @@ static char* const message[10] = {
     (const char*)(MESSAGE7_OFFSET),
     (const char*)(MESSAGE8_OFFSET),
     (const char*)(MESSAGE9_OFFSET),
+    (const char*)(MESSAGE10_OFFSET),
+    (const char*)(MESSAGE11_OFFSET),
+    (const char*)(MESSAGE12_OFFSET),
+    (const char*)(MESSAGE13_OFFSET),
 };
 
 extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
