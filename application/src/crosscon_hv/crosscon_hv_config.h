@@ -5,10 +5,9 @@
 #include <stdint.h>
 #include <zephyr/irq.h>
 #include <cmsis_core.h>
-#include "hv_functions.h"
 #include "tee_internal_api.h"
 
-#define IPC_IRQ_ID          63      //79 on Bao config
+#define IPC_IRQ_ID          62      //78 on Bao config
 #define CROSSCON_HV_IMAGE_START     0x10000000UL
 #define CROSSCON_HV_HC_OFF          0x41UL
 #define CROSSCON_HV_HC_ADDR         ((uintptr_t)CROSSCON_HV_IMAGE_START + CROSSCON_HV_HC_OFF)
