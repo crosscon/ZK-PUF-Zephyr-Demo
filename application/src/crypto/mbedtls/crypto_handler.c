@@ -12,7 +12,7 @@ mbedtls_ecp_point g;
 int init_crypto()
 {
     int ret;
-    ret = innner_init_ECC(&grp, &h, &g);
+    ret = inner_init_ECC(&grp, &h, &g);
     if (ret != 0) return ret;
 }
 
@@ -72,7 +72,7 @@ int get_random_mpi(mbedtls_mpi *X)
     return mbedtls_mpi_mod_mpi(X, X, &grp.N);
 }
 
-int innner_init_ECC(mbedtls_ecp_group *grp, mbedtls_ecp_point *h, mbedtls_ecp_point *g )
+int inner_init_ECC(mbedtls_ecp_group *grp, mbedtls_ecp_point *h, mbedtls_ecp_point *g )
 {
     int ret;
     mbedtls_ecp_group_init(grp);
