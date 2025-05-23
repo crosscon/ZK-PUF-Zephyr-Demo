@@ -226,9 +226,15 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
         uint8_t challenge_1[CHALLENGE_SIZE];
         uint8_t nonce[NONCE_SIZE];
 
+        LOG_INF("Reading Challenges and Nonce");
+
         memcpy(&challenge_0, shared_mem0, CHALLENGE_SIZE);
         memcpy(&challenge_1, shared_mem1, CHALLENGE_SIZE);
         memcpy(&nonce, shared_mem2, NONCE_SIZE);
+
+        LOG_HEXDUMP_DBG(challenge_0, CHALLENGE_SIZE, "C1");
+        LOG_HEXDUMP_DBG(challenge_1, CHALLENGE_SIZE, "C2");
+        LOG_HEXDUMP_DBG(nonce, NONCE_SIZE, "n");
 
         ret = get_random_mpi(&random_val_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
