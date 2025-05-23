@@ -269,6 +269,9 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
 
         memcpy(combined_raw_proof_nonce, raw_proof_commitment, 64);
         memcpy(combined_raw_proof_nonce + 64, nonce, NONCE_SIZE);
+
+        LOG_HEXDUMP_DBG(combined_raw_proof_nonce, 80, "P||n to be hashed");
+
         mbedtls_sha256(combined_raw_proof_nonce, 64 + NONCE_SIZE, hash, 0);
         ret = mbedtls_mpi_read_binary(&alpha, hash, sizeof(hash));
         if (ret != 0) return TEE_ERROR_GENERIC;
