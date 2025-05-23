@@ -1,7 +1,7 @@
 manifest:
   remotes:
     - name: zephyrproject-rtos-fork
-      url-base: https://github.com/tym2k1
+      url-base: https://github.com/crosscon
   projects:
     - name: zephyr
       remote: zephyrproject-rtos-fork
