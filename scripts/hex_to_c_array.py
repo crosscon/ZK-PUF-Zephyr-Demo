@@ -1,52 +1,72 @@
 #!/usr/bin/env python3
-
 import sys
+import re
 import textwrap
 
 def print_help():
-    help_text = """
+    print(textwrap.dedent("""
     Usage:
-      python hex_to_c_array.py HEX_STRING
+      # Read from a file:
+      python hex_to_c_array.py <input_file>
 
-    Arguments:
-      HEX_STRING    A string of hexadecimal characters (no spaces), e.g.:
-                    026E3C3B96111EE52998269C...
+    Input format:
+      Lines containing groups of two‐digit hex bytes, e.g.
+         0c 40 f5 ff 9d 5a be fc  c6 9f 84 0d f2 46 84 96 |.@...Z.. .....F..
+         cf 8c 47 eb 30 6d 4d 20  2f f5 d3 7c 71 99 3e 13 |..G.0mM  /..|q.>.
+      Anything after a '|' is ignored; any non‐hex text is skipped.
 
     Output:
-      A well-formatted C-style uint8_t array definition without a trailing comma.
+      A formatted C-style array:
+        uint8_t keyCode[] = {
+            0x0C, 0x40, …, 0x13
+        };
+    """))
 
-    Example:
-      python hex_to_c_array.py 026E3C3B9611...
+def read_input(path):
+    if path == '-':
+        return sys.stdin.read().splitlines()
+    else:
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read().splitlines()
+
+def parse_hex_lines(lines):
     """
-    print(textwrap.dedent(help_text))
+    For each line:
+      - strip off anything after '|'
+      - find all two‐digit hex tokens
+    Returns a flat list of hex‐byte strings, e.g. ['0c','40', ...]
+    """
+    tokens = []
+    for line in lines:
+        # drop ASCII dump
+        if '|' in line:
+            line = line.split('|', 1)[0]
+        # find all 2‐digit hex tokens
+        toks = re.findall(r'\b([0-9A-Fa-f]{2})\b', line)
+        tokens.extend(toks)
+    return tokens
 
-def hex_to_c_array(hex_string):
-    if len(hex_string) % 2 != 0:
-        print("Error: Hex string must have an even number of characters.")
-        sys.exit(1)
-
-    try:
-        bytes_array = [f"0x{hex_string[i:i+2]}" for i in range(0, len(hex_string), 2)]
-    except Exception as e:
-        print(f"Error: Failed to process hex string — {e}")
-        sys.exit(1)
-
-    print("uint8_t keyCode[] = \n{")
-    for i in range(0, len(bytes_array), 16):
-        line = bytes_array[i:i+16]
-        if i + 16 >= len(bytes_array):  # last line
-            print("    " + ", ".join(line))
-        else:
-            print("    " + ", ".join(line) + ",")
+def format_c_array(tokens, var_name='keyCode'):
+    arr = [f"0x{t.upper()}" for t in tokens]
+    print(f"uint8_t {var_name}[] = {{")
+    for i in range(0, len(arr), 16):
+        chunk = arr[i:i+16]
+        sep = "," if i + 16 < len(arr) else ""
+        print("    " + ", ".join(chunk) + sep)
     print("};")
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
+    if len(sys.argv) != 2 or sys.argv[1] in ('-h', '--help'):
         print_help()
         sys.exit(0)
 
-    hex_string = sys.argv[1].strip().replace(" ", "").replace("\n", "")
-    hex_to_c_array(hex_string)
+    path = sys.argv[1]
+    lines = read_input(path)
+    tokens = parse_hex_lines(lines)
+    if not tokens:
+        print("Error: No hex bytes found in input.", file=sys.stderr)
+        sys.exit(1)
+    format_c_array(tokens)
 
 if __name__ == "__main__":
     main()
