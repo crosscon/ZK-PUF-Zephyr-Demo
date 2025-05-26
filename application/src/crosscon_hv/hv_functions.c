@@ -169,6 +169,14 @@ TEE_Result PUF_TA_get_commitment(void* shared_mem0,
         ret = get_response_to_challenge(&challenge_1, &response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = get_commited_value(&response_0, &response_1, &commitment);
+
+        /* Those are secrets that shouldn't be logged outside
+         * of development purposes and should be immediately
+         * flushed from memory */
+
+        // log_mpi_hex("R1", &response_0);
+        // log_mpi_hex("R2", &response_1);
+
         mbedtls_mpi_free(&response_0);
         mbedtls_mpi_free(&response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
@@ -288,23 +296,28 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
         ret = mbedtls_mpi_mul_mpi(&mult_0, &alpha, &response_0);
         ret = mbedtls_mpi_mul_mpi(&mult_1, &alpha, &response_1);
 
-        log_mpi_hex("R1", &response_0);
-        log_mpi_hex("R2", &response_1);
 
-        log_mpi_hex("αR1", &mult_0);
-        log_mpi_hex("αR2", &mult_1);
+        /* Those are secrets that shouldn't be logged outside
+         * of development purposes and should be immediately
+         * flushed from memory */
+
+        // log_mpi_hex("R1", &response_0);
+        // log_mpi_hex("R2", &response_1);
+
+        // log_mpi_hex("αR1", &mult_0);
+        // log_mpi_hex("αR2", &mult_1);
 
         ret = mbedtls_mpi_add_mpi(&result_0, &random_val_0, &mult_0);
         ret = mbedtls_mpi_add_mpi(&result_1, &random_val_1, &mult_1);
-
-        log_mpi_hex("v = r+αR1", &result_0);
-        log_mpi_hex("w = u+αR2", &result_1);
 
         mbedtls_mpi_free(&response_0);
         mbedtls_mpi_free(&response_1);
 
         mbedtls_mpi_free(&mult_0);
         mbedtls_mpi_free(&mult_1);
+
+        log_mpi_hex("v = r+αR1", &result_0);
+        log_mpi_hex("w = u+αR2", &result_1);
 
         mbedtls_mpi_write_binary(&result_0, raw_result0, 64);
         mbedtls_mpi_write_binary(&result_1, raw_result1, 64);
