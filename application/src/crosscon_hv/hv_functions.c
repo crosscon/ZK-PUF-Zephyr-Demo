@@ -92,38 +92,42 @@ TEE_Result PUF_TA_init(void* shared_mem0,
                        void* shared_mem11
                        )
 {
+    uint8_t raw_g[64];
+    uint8_t raw_h[64];
+    int ret;
+    TEE_Result result;
+
     if(!has_been_initialized){
-        int ret;
-        uint8_t raw_g[64];
-        uint8_t raw_h[64];
         ret = init_puf();
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = init_crypto();
         if (ret != 0) return TEE_ERROR_GENERIC;
-        log_ecp_point("g", &g);
-        log_ecp_point("h", &h);
-        ret = extract_raw_commitment(&g, &raw_g);
-        if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = extract_raw_commitment(&h, &raw_h);
-        if (ret != 0) return TEE_ERROR_GENERIC;
-
-        LOG_HEXDUMP_DBG(raw_g, 64, "Raw g to be written");
-        LOG_HEXDUMP_DBG(raw_h, 64, "Raw h to be written");
-
-        memcpy(shared_mem0, raw_g +  0, 16);
-        memcpy(shared_mem1, raw_g + 16, 16);
-        memcpy(shared_mem2, raw_g + 32, 16);
-        memcpy(shared_mem3, raw_g + 48, 16);
-        memcpy(shared_mem4, raw_h +  0, 16);
-        memcpy(shared_mem5, raw_h + 16, 16);
-        memcpy(shared_mem6, raw_h + 32, 16);
-        memcpy(shared_mem7, raw_h + 48, 16);
 
         has_been_initialized = true;
-        return TEE_SUCCESS;
+        result = TEE_SUCCESS;
     } else {
-        return TEE_ERROR_GENERIC;
+        result = TEE_ERROR_BAD_STATE;
     }
+    log_ecp_point("g", &g);
+    log_ecp_point("h", &h);
+    ret = extract_raw_commitment(&g, &raw_g);
+    if (ret != 0) return TEE_ERROR_GENERIC;
+    ret = extract_raw_commitment(&h, &raw_h);
+    if (ret != 0) return TEE_ERROR_GENERIC;
+
+    LOG_HEXDUMP_DBG(raw_g, 64, "Raw g to be written");
+    LOG_HEXDUMP_DBG(raw_h, 64, "Raw h to be written");
+
+    memcpy(shared_mem0, raw_g +  0, 16);
+    memcpy(shared_mem1, raw_g + 16, 16);
+    memcpy(shared_mem2, raw_g + 32, 16);
+    memcpy(shared_mem3, raw_g + 48, 16);
+    memcpy(shared_mem4, raw_h +  0, 16);
+    memcpy(shared_mem5, raw_h + 16, 16);
+    memcpy(shared_mem6, raw_h + 32, 16);
+    memcpy(shared_mem7, raw_h + 48, 16);
+
+    return result;
 }
 
 TEE_Result PUF_TA_get_commitment(void* shared_mem0,
