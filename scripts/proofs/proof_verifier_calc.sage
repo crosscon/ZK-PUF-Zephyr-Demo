@@ -44,7 +44,7 @@ print("\nStep 4: Enter scalar nonce (decimal or hex with 0x prefix)")
 nonce = parse_input(input("Enter nonce: "))
 
 # 5) Input P commitment
-print("\nStep 5: Input coordinates for COM (decimal or hex with 0x prefix)")
+print("\nStep 5: Input coordinates for P (decimal or hex with 0x prefix)")
 P_x = parse_input(input("Enter P_x: "))
 P_y = parse_input(input("Enter P_y: "))
 P = E((P_x, P_y))
