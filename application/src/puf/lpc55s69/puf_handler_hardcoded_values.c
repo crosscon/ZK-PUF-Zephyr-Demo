@@ -1,6 +1,8 @@
 #include "puf_handler.h"
 
+#ifndef HARDCODED_PUF_SET
 #define HARDCODED_PUF_SET 1
+#endif
 
 #if HARDCODED_PUF_SET == 1
 
