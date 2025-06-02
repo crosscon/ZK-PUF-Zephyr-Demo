@@ -47,11 +47,7 @@ $P$, $v$ and $w$ are returned by the function.
 These along with saved $\textit{COM}$, $g$, $h$ and $n$ can be used to authenticate device.
 Example scripts for this purpose are available in [scripts/proofs](./scripts/proofs).
 
-Below is the full proof:
-
-$$
-g^v \cdot h^w = g^{r+\alpha R1} \cdot h^{r+\alpha R1} = g^r \cdot g^{\alpha R1} \cdot h^u \cdot h^{\alpha R2} = P \cdot (g^{R_1} \cdot h^{R_2})^{\alpha} = P \cdot \textit{COM}^{\alpha}
-$$
+For more info on how to proof/authenticate take a look at [scripts/proofs/README.md](./scripts/proofs/README.md)
 
 ## API
 
