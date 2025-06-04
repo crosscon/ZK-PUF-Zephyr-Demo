@@ -18,7 +18,7 @@ sage <script>
 The full verification follows the equation:
 
 $$
-g^v \cdot h^w = g^{r+\alpha R1} \cdot h^{r+\alpha R1} = g^r \cdot g^{\alpha R1} \cdot h^u \cdot h^{\alpha R2} = P \cdot (g^{R_1} \cdot h^{R_2})^{\alpha} = P \cdot \textit{COM}^{\alpha}
+g^v \cdot h^w = g^{r+\alpha R1} \cdot h^{u+\alpha R1} = g^r \cdot g^{\alpha R1} \cdot h^u \cdot h^{\alpha R2} = P \cdot (g^{R_1} \cdot h^{R_2})^{\alpha} = P \cdot \textit{COM}^{\alpha}
 $$
 
 This verification process guarantees the verifier that the prover indeed holds the two PUF
