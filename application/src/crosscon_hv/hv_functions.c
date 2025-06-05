@@ -270,8 +270,12 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
         ret = get_random_mpi(&random_val_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
 
-        log_mpi_hex("r", &random_val_0);
-        log_mpi_hex("u", &random_val_1);
+        /* Those are secrets that shouldn't be logged outside
+         * of development purposes and should be immediately
+         * flushed from memory */
+
+        // log_mpi_hex("r", &random_val_0);
+        // log_mpi_hex("u", &random_val_1);
 
         ret = get_commited_value(&random_val_0, &random_val_1, &proof_commitment);
         log_ecp_point("P = (r*g)+(u*h)", &proof_commitment);
