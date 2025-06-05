@@ -265,6 +265,8 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
         LOG_HEXDUMP_DBG(challenge_1, CHALLENGE_SIZE, "C2");
         LOG_HEXDUMP_DBG(nonce, NONCE_SIZE, "n");
 
+        LOG_INF("Getting random values r and u");
+
         ret = get_random_mpi(&random_val_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = get_random_mpi(&random_val_1);
@@ -277,6 +279,8 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
         // log_mpi_hex("r", &random_val_0);
         // log_mpi_hex("u", &random_val_1);
 
+        LOG_INF("Calculating P");
+
         ret = get_commited_value(&random_val_0, &random_val_1, &proof_commitment);
         log_ecp_point("P = (r*g)+(u*h)", &proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
@@ -288,6 +292,8 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
 
         LOG_HEXDUMP_DBG(combined_raw_proof_nonce, 80, "P||n to be hashed");
 
+        LOG_INF("Calculating α");
+
         mbedtls_sha256(combined_raw_proof_nonce, 64 + NONCE_SIZE, hash, 0);
         ret = mbedtls_mpi_read_binary(&alpha, hash, sizeof(hash));
         if (ret != 0) return TEE_ERROR_GENERIC;
@@ -296,6 +302,8 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
 
         mbedtls_mpi_init(&response_0);
         mbedtls_mpi_init(&response_1);
+
+        LOG_INF("Calculating v, w");
 
         ret = get_response_to_challenge(&challenge_0, &response_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
@@ -334,6 +342,8 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
 
         LOG_HEXDUMP_DBG(raw_result0, 64, "Raw v to be written");
         LOG_HEXDUMP_DBG(raw_result1, 64, "Raw w to be written");
+
+        LOG_INF("Writing P, v, w to Shared Memory");
 
         memcpy(shared_mem0, raw_proof_commitment +  0, 16);
         memcpy(shared_mem1, raw_proof_commitment + 16, 16);
