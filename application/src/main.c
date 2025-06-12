@@ -7,106 +7,67 @@ LOG_MODULE_REGISTER(GUEST_VM, LOG_LEVEL_DBG);
 
 #define IS_WRITE_TO_FLASH_ENABLED 1
 
-#define CHALLENGE_SIZE 16
-#define NONCE_SIZE 16
+#define PUF_TA_INIT_FUNC_ID            0x00112233
+#define PUF_TA_GET_COMMITMENT_FUNC_ID  0x11223344
+#define PUF_TA_GET_ZK_PROOFS_FUNC_ID   0x22334455
 
-void vm_init() {
-    IRQ_CONNECT(IPC_IRQ_ID, 0, ipc_irq_handler, NULL, 0);
-    irq_enable(IPC_IRQ_ID);
-    clear_mem();
-    LOG_INF("VM Initialized");
-}
+#define CHALLENGE_1   0x3CA1F49257B80E6D1FA9C3E7749012AD
 
+#define CHALLENGE_2   0xFF00FF00FF00FF0000FF00FF00FF00FF
 
-void clear_mem(void)
-{
-    memset(message[0], 0, MESSAGE0_SIZE);
-    memset(message[1], 0, MESSAGE1_SIZE);
-    memset(message[2], 0, MESSAGE2_SIZE);
-    memset(message[3], 0, MESSAGE3_SIZE);
-    memset(message[4], 0, MESSAGE4_SIZE);
-    memset(message[5], 0, MESSAGE5_SIZE);
-    memset(message[6], 0, MESSAGE6_SIZE);
-    memset(message[7], 0, MESSAGE7_SIZE);
-    memset(message[8], 0, MESSAGE8_SIZE);
-    memset(message[9], 0, MESSAGE9_SIZE);
-    memset(message[10], 0, MESSAGE10_SIZE);
-    memset(message[11], 0, MESSAGE11_SIZE);
-    memset(message[12], 0, MESSAGE12_SIZE);
-    memset(message[13], 0, MESSAGE13_SIZE);
-}
+#define NONCE         0xAABBCCDDEEFFAABBCCDDEEFF00112233
 
 int main(void)
 {
-    static const uint8_t uuid0[TEE_UUID_LEN] = {
-        0x00, 0x11, 0x22, 0x33,   /* timeLow    */
-        0x44, 0x55,               /* timeMid    */
-        0x66, 0x77,               /* timeHi+ver */
-        0x88, 0x99, 0xAA, 0xBB,   /* clockSeq   */
-        0xCC, 0xDD, 0xEE, 0xFF    /* node       */
+    /* Hardcoded session */
+    int session_id = 0;
+
+    LOG_INF("VM Initialized");
+    const struct device *tee_dev = device_get_binding("crosscon_hv_tee");
+    if (tee_dev == NULL) {
+        LOG_ERR("Failed to bind device 'crosscon_hv_tee'");
+        return -1;
+    }
+    struct tee_version_info info;
+    int res;
+    res = tee_get_version(tee_dev, &info);
+    if (res == 0) {
+        LOG_INF("TEE version info:");
+        LOG_INF("impl_id   = %u", info.impl_id);
+        LOG_INF("impl_caps = 0x%08x", info.impl_caps);
+        LOG_INF("gen_caps  = 0x%08x", info.gen_caps);
+    } else {
+        LOG_ERR("tee_get_version() failed: %d", res);
+    }
+
+    struct tee_shm ipc_shm = {
+        .dev   = tee_dev,         // from device_get_binding()
+        .addr  = VMS_IPC_BASE,    // static shared memory base
+        .size  = VMS_IPC_SIZE,    // total available size
+        .flags = 0,               // no special flags needed
     };
 
-    static const uint8_t uuid1[TEE_UUID_LEN] = {
-        0x11, 0x22, 0x33, 0x44,   /* timeLow    */
-        0x55, 0x66,               /* timeMid    */
-        0x77, 0x88,               /* timeHi+ver */
-        0x99, 0xAA, 0xBB, 0xCC,   /* clockSeq   */
-        0xDD, 0xEE, 0xFF, 0x00    /* node       */
-    };
+    LOG_INF("TEE Initialized");
 
-    static const uint8_t uuid2[TEE_UUID_LEN] = {
-        0x22, 0x33, 0x44, 0x55,   /* timeLow    */
-        0x66, 0x77,               /* timeMid    */
-        0x88, 0x99,               /* timeHi+ver */
-        0xAA, 0xBB, 0xCC, 0xDD,   /* clockSeq   */
-        0xEE, 0xFF, 0x00, 0x11    /* node       */
-    };
+    /* PUF_TA_init */
+    unsigned int num_param;
 
-    static const uint8_t challenge_1[CHALLENGE_SIZE] = {
-        0x3C, 0xA1, 0xF4, 0x92,
-        0x57, 0xB8, 0x0E, 0x6D,
-        0x1F, 0xA9, 0xC3, 0xE7,
-        0x74, 0x90, 0x12, 0xAD
-    };
+    struct tee_param param[4] = {0};
+    for (int i = 0; i < 4; i++) {
+        param[i].attr = TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT;
+        param[i].a    = (uint64_t)(i * 256);           // offsets: 0, 256, 512, 768
+        param[i].b    = (uint64_t)32;                  // length: 32 bytes
+        param[i].c    = (uint64_t)(uintptr_t)&ipc_shm; // shared-memory ID (handle)
+    }
 
-    static const uint8_t challenge_2[CHALLENGE_SIZE] = {
-        0xFF, 0x00, 0xFF, 0x00,
-        0xFF, 0x00, 0xFF, 0x00,
-        0x00, 0xFF, 0x00, 0xFF,
-        0x00, 0xFF, 0x00, 0xFF
-    };
+    struct tee_invoke_func_arg arg = {0};
+    arg.func      = PUF_TA_INIT_FUNC_ID;
+    arg.session   = session_id;
+    arg.cancel_id = 0;
+    arg.ret       = 0;
+    arg.ret_origin= 0;
 
-    static const uint8_t nonce[NONCE_SIZE] = {
-        0xAA, 0xBB, 0xCC, 0xDD,
-        0xEE, 0xFF, 0xAA, 0xBB,
-        0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33
-    };
-
-    vm_init();
-
-    LOG_INF("Calling func 1");
-    memcpy((void*)message[0], &uuid0, sizeof(uuid0));
-    ipc_notify(0,0);
-
-    k_msleep(500);
-    clear_mem();
-
-    LOG_INF("Calling func 2");
-    memcpy((void*)message[0], &uuid1, sizeof(uuid1));
-    memcpy((void*)message[2], &challenge_1, sizeof(challenge_1));
-    memcpy((void*)message[3], &challenge_2, sizeof(challenge_2));
-    ipc_notify(0,0);
-
-    k_msleep(500);
-    clear_mem();
-
-    LOG_INF("Calling func 3");
-    memcpy((void*)message[0], &uuid2, sizeof(uuid2));
-    memcpy((void*)message[2], &challenge_1, sizeof(challenge_1));
-    memcpy((void*)message[3], &challenge_2, sizeof(challenge_2));
-    memcpy((void*)message[4], &nonce, sizeof(nonce));
-    ipc_notify(0,0);
+    res = tee_invoke_func(tee_dev, &arg, 4, &param);
 
     // Wait for interrupts and handle them according to function_table
     while(1);
