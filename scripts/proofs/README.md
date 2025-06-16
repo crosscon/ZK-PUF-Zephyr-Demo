@@ -158,3 +158,8 @@ Computation complete
 This script is aimed for development/debugging and calculates every variable
 used within the proof. The user needs to manually parse $g$, $h$, $R_1$, $R_2$,
 $r$, $u$ and $n$.
+
+## `hash_to_curve_h_calc.sage`
+
+This script is aimed for development/debugging and aims to reproduce how $h$ is
+generated in the code using Hash-to-Curve to be fully independent of $g$.
