@@ -1,14 +1,15 @@
 # Verifier Proof scripts
 
-This repository contains 2 scripts that were developed with
-[SageMath](https://www.sagemath.org/) that allow for working and debugging the
+This directory contains scripts that were developed with
+[SageMath](https://www.sagemath.org/) that allow working with and debugging the
 verification process of the Zero Knowledge PUF scheme provided within the
 CROSSCON Project:
 
 - [`proof_verifier_calc.sage`](./proof_verifier_calc.sage)
 - [`proof_full_calc.sage`](./proof_full_calc.sage)
+- [`h_generation_calc.sage`](./h_generation_calc.sage)
 
-Both of these scripts can be run with:
+Scripts can be run with:
 
 ```sh
 sage <script>

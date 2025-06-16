@@ -6,6 +6,7 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ecp.h"
+#include "mbedtls/memory_buffer_alloc.h"
 
 extern mbedtls_ecp_group grp;
 extern mbedtls_ecp_point h;
