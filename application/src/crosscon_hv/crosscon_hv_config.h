@@ -16,6 +16,9 @@
 #define VMS_IPC_BASE        0x20017000UL
 #define VMS_IPC_SIZE        0x1000
 
+#define MAX_CALLS_PER_WINDOW 5
+#define TIME_WINDOW_MS (30 * 1000)  // 30 seconds
+
 /* Define shared memory layout */
 #define MESSAGE0_SIZE       ((const size_t)(0x10)) //128-bit/16-byte - place for TEE Calls UUID
 #define MESSAGE0_OFFSET     VMS_IPC_BASE
