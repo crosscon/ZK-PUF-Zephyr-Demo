@@ -35,6 +35,13 @@
 #define TEE_ERROR_TIME_NOT_SET            0xFFFF5000
 #define TEE_ERROR_TIME_NEEDS_RESET        0xFFFF5001
 
+/* Values used within `arg.ret_origin` to indicate where
+ * an error or return code originated from */
+#define TEE_ORIGIN_API                    0x00000001
+#define TEE_ORIGIN_COMMS                  0x00000002
+#define TEE_ORIGIN_TEE                    0x00000003
+#define TEE_ORIGIN_TRUSTED_APP            0x00000004
+
 #define TEE_UUID_LEN 16
 
 typedef uint32_t TEE_Result;

@@ -5,82 +5,103 @@
 #include <stdint.h>
 #include <zephyr/irq.h>
 #include <cmsis_core.h>
-#include "hv_functions.h"
+#include <zephyr/drivers/tee.h>
 #include "tee_internal_api.h"
 
-#define IPC_IRQ_ID          63      //79 on Bao config
-#define CROSSCON_HV_IMAGE_START     0x10000000UL
-#define CROSSCON_HV_HC_OFF          0x41UL
-#define CROSSCON_HV_HC_ADDR         ((uintptr_t)CROSSCON_HV_IMAGE_START + CROSSCON_HV_HC_OFF)
-#define CROSSCON_HV_HC_IPC_ID       0x1
-#define VMS_IPC_BASE        0x20017000UL
-#define VMS_IPC_SIZE        0x1000
+// ----------------------------------------
+// Base Config
+// ----------------------------------------
 
-#define MAX_CALLS_PER_WINDOW 5
-#define TIME_WINDOW_MS (30 * 1000)  // 30 seconds
+#define IPC_IRQ_ID                 63     //79 on Bao config
+#define CROSSCON_HV_IMAGE_START    0x10000000UL
+#define CROSSCON_HV_HC_OFF         0x41UL
+#define CROSSCON_HV_HC_ADDR        ((uintptr_t)CROSSCON_HV_IMAGE_START + CROSSCON_HV_HC_OFF)
+#define CROSSCON_HV_HC_IPC_ID      0x1
 
-/* Define shared memory layout */
-#define MESSAGE0_SIZE       ((const size_t)(0x10)) //128-bit/16-byte - place for TEE Calls UUID
-#define MESSAGE0_OFFSET     VMS_IPC_BASE
+#define VMS_IPC_BASE               0x20017000UL
+#define VMS_MAX_PARAMS             4
+#define VMS_IPC_PAYLOAD_SIZE       1024UL
+#define VMS_MEMREF_SLOT_SIZE       (VMS_IPC_PAYLOAD_SIZE / VMS_MAX_PARAMS)
+#define VMS_TOTAL_SIZE             (VMS_ARG_SIZE + VMS_PARAM_SIZE + VMS_IPC_PAYLOAD_SIZE)
 
-#define MESSAGE1_SIZE       ((const size_t)(0x4))  //32-bit/4-byte - place for TEEC_Result
-#define MESSAGE1_OFFSET     MESSAGE0_OFFSET + MESSAGE0_SIZE
+// ----------------------------------------
+// Struct sizes
+// ----------------------------------------
 
-#define MESSAGE2_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 1
-#define MESSAGE2_OFFSET     MESSAGE1_OFFSET + MESSAGE1_SIZE
+#define VMS_PARAM_SIZE             (VMS_MAX_PARAMS * sizeof(GP_Param))
+#define VMS_ARG_SIZE               sizeof(GP_InvokeArgs)
 
-#define MESSAGE3_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 2
-#define MESSAGE3_OFFSET     MESSAGE2_OFFSET + MESSAGE2_SIZE
+// ----------------------------------------
+// Offsets into Shared Memory
+// ----------------------------------------
 
-#define MESSAGE4_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 3
-#define MESSAGE4_OFFSET     MESSAGE3_OFFSET + MESSAGE3_SIZE
+#define VMS_OFFSET_INVOKE_ARGS     0x0000
+#define VMS_OFFSET_PARAMS          (VMS_OFFSET_INVOKE_ARGS + VMS_ARG_SIZE)
+#define VMS_OFFSET_PAYLOAD         (VMS_OFFSET_PARAMS + VMS_PARAM_SIZE)
 
-#define MESSAGE5_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 4
-#define MESSAGE5_OFFSET     MESSAGE4_OFFSET + MESSAGE4_SIZE
+#define VMS_MEMREF0_OFFSET         0
+#define VMS_MEMREF1_OFFSET         (1 * VMS_MEMREF_SLOT_SIZE)
+#define VMS_MEMREF2_OFFSET         (2 * VMS_MEMREF_SLOT_SIZE)
+#define VMS_MEMREF3_OFFSET         (3 * VMS_MEMREF_SLOT_SIZE)
 
-#define MESSAGE6_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 5
-#define MESSAGE6_OFFSET     MESSAGE5_OFFSET + MESSAGE5_SIZE
+// ----------------------------------------
+// Packed Structs
+// ----------------------------------------
 
-#define MESSAGE7_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 6
-#define MESSAGE7_OFFSET     MESSAGE6_OFFSET + MESSAGE6_SIZE
+typedef struct __packed {
+    uint32_t func;
+    uint32_t session;
+    uint32_t cancel_id;
+    uint32_t ret;
+    uint32_t ret_origin;
+    uint32_t paramTypes;
+} GP_InvokeArgs;
 
-#define MESSAGE8_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 7
-#define MESSAGE8_OFFSET     MESSAGE7_OFFSET + MESSAGE7_SIZE
+typedef struct __packed {
+    uint64_t attr;
+    uint64_t a;
+    uint64_t b;
+    uint64_t c;
+} GP_Param;
 
-#define MESSAGE9_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 8
-#define MESSAGE9_OFFSET     MESSAGE8_OFFSET + MESSAGE8_SIZE
+typedef struct __packed {
+    GP_InvokeArgs invoke_args;
+    GP_Param      params[VMS_MAX_PARAMS];
+    uint8_t       payload[VMS_IPC_PAYLOAD_SIZE];
+} GP_SharedMessage;
 
-#define MESSAGE10_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 9
-#define MESSAGE10_OFFSET     MESSAGE9_OFFSET + MESSAGE9_SIZE
+/* Macro to encode paramTypes field */
+#define CROSSCON_PARAM_TYPES(t0, t1, t2, t3) \
+    (((uint32_t)(t0) & 0xF)       | \
+    (((uint32_t)(t1) & 0xF) << 4) | \
+    (((uint32_t)(t2) & 0xF) << 8) | \
+    (((uint32_t)(t3) & 0xF) << 12))
 
-#define MESSAGE11_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 10
-#define MESSAGE11_OFFSET     MESSAGE10_OFFSET + MESSAGE10_SIZE
+// ----------------------------------------
+// Direct Access Pointers
+// ----------------------------------------
 
-#define MESSAGE12_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 11
-#define MESSAGE12_OFFSET     MESSAGE11_OFFSET + MESSAGE11_SIZE
+#define VMS_HEADER_PTR             ((volatile uint8_t *)VMS_IPC_BASE)
+#define VMS_PAYLOAD_PTR            ((volatile uint8_t *)(VMS_IPC_BASE + VMS_OFFSET_PAYLOAD))
+#define GP_SHARED_MSG_PTR          ((volatile GP_SharedMessage *)VMS_IPC_BASE)
 
-#define MESSAGE13_SIZE       ((const size_t)(0x10))  //128-bit/16-byte - place for Argument 12
-#define MESSAGE13_OFFSET     MESSAGE12_OFFSET + MESSAGE12_SIZE
+#define GP_ARGS_PTR                ((volatile GP_InvokeArgs *)(VMS_IPC_BASE + VMS_OFFSET_INVOKE_ARGS))
+#define GP_PARAMS_PTR              ((volatile GP_Param *)(VMS_IPC_BASE + VMS_OFFSET_PARAMS))
 
-static char* const message[14] = {
-    (const char*)(MESSAGE0_OFFSET),
-    (const char*)(MESSAGE1_OFFSET),
-    (const char*)(MESSAGE2_OFFSET),
-    (const char*)(MESSAGE3_OFFSET),
-    (const char*)(MESSAGE4_OFFSET),
-    (const char*)(MESSAGE5_OFFSET),
-    (const char*)(MESSAGE6_OFFSET),
-    (const char*)(MESSAGE7_OFFSET),
-    (const char*)(MESSAGE8_OFFSET),
-    (const char*)(MESSAGE9_OFFSET),
-    (const char*)(MESSAGE10_OFFSET),
-    (const char*)(MESSAGE11_OFFSET),
-    (const char*)(MESSAGE12_OFFSET),
-    (const char*)(MESSAGE13_OFFSET),
-};
+// ----------------------------------------
+// Global Declarations
+// ----------------------------------------
+
+extern volatile struct tee_shm ipc_shm;
+extern volatile struct tee_param param[4];
+extern volatile struct tee_invoke_func_arg arg;
+extern volatile GP_SharedMessage *msg;
+
+// ----------------------------------------
+// Hypervisor Specific Functions
+// ----------------------------------------
 
 extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
-
 void ipc_notify(int ipc_id, int event_id);
 void ipc_irq_handler(void);
 

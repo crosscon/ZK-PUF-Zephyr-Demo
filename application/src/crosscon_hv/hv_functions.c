@@ -9,89 +9,42 @@ LOG_MODULE_DECLARE(PUF_VM);
 
 bool has_been_initialized = false;
 
-const uuid_func_map_t function_table[FUNCTION_TABLE_SIZE] = {
+const func_id_map_t function_table[FUNCTION_TABLE_SIZE] = {
     {
-        .uuid = {
-            0x00, 0x11, 0x22, 0x33,   /* timeLow    */
-            0x44, 0x55,               /* timeMid    */
-            0x66, 0x77,               /* timeHi+ver */
-            0x88, 0x99, 0xAA, 0xBB,   /* clockSeq   */
-            0xCC, 0xDD, 0xEE, 0xFF    /* node       */
-        },
-        .handler = PUF_TA_init,
-        .arg0    = message[2],
-        .arg1    = message[3],
-        .arg2    = message[4],
-        .arg3    = message[5],
-        .arg4    = message[6],
-        .arg5    = message[7],
-        .arg6    = message[8],
-        .arg7    = message[9],
-        .arg8    = message[10],
-        .arg9    = message[11],
-        .arg10   = message[12],
-        .arg11   = message[13],
+        .func_id = PUF_TA_INIT_FUNC_ID,
+        .expected_param_types = CROSSCON_PARAM_TYPES(TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT),
+        .expected_param_lengths = {32, 32, 32, 32},
+        .handler = PUF_TA_init
     },
     {
-        .uuid = {
-            0x11, 0x22, 0x33, 0x44,   /* timeLow    */
-            0x55, 0x66,               /* timeMid    */
-            0x77, 0x88,               /* timeHi+ver */
-            0x99, 0xAA, 0xBB, 0xCC,   /* clockSeq   */
-            0xDD, 0xEE, 0xFF, 0x00    /* node       */
-        },
-        .handler = PUF_TA_get_commitment,
-        .arg0    = message[2],
-        .arg1    = message[3],
-        .arg2    = message[4],
-        .arg3    = message[5],
-        .arg4    = message[6],
-        .arg5    = message[7],
-        .arg6    = message[8],
-        .arg7    = message[9],
-        .arg8    = message[10],
-        .arg9    = message[11],
-        .arg10   = message[12],
-        .arg11   = message[13],
+        .func_id = PUF_TA_GET_COMMITMENT_FUNC_ID,
+        .expected_param_types = CROSSCON_PARAM_TYPES(TEE_PARAM_ATTR_TYPE_MEMREF_INPUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_INPUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT),
+        .expected_param_lengths = {32, 32, 32, 32},
+        .handler = PUF_TA_get_commitment
     },
     {
-        .uuid = {
-            0x22, 0x33, 0x44, 0x55,   /* timeLow    */
-            0x66, 0x77,               /* timeMid    */
-            0x88, 0x99,               /* timeHi+ver */
-            0xAA, 0xBB, 0xCC, 0xDD,   /* clockSeq   */
-            0xEE, 0xFF, 0x00, 0x11    /* node       */
-        },
-        .handler = PUF_TA_get_ZK_proofs,
-        .arg0    = message[2],
-        .arg1    = message[3],
-        .arg2    = message[4],
-        .arg3    = message[5],
-        .arg4    = message[6],
-        .arg5    = message[7],
-        .arg6    = message[8],
-        .arg7    = message[9],
-        .arg8    = message[10],
-        .arg9    = message[11],
-        .arg10   = message[12],
-        .arg11   = message[13],
+        .func_id = PUF_TA_GET_ZK_PROOFS_FUNC_ID,
+        .expected_param_types = CROSSCON_PARAM_TYPES(TEE_PARAM_ATTR_TYPE_MEMREF_INOUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_INOUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_INOUT,
+                                                     TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT),
+        .expected_param_lengths = {32, 32, 64, 64},
+        .handler = PUF_TA_get_ZK_proofs
     }
 };
 
-TEE_Result PUF_TA_init(void* shared_mem0,
-                       void* shared_mem1,
-                       void* shared_mem2,
-                       void* shared_mem3,
-                       void* shared_mem4,
-                       void* shared_mem5,
-                       void* shared_mem6,
-                       void* shared_mem7,
-                       void* shared_mem8,
-                       void* shared_mem9,
-                       void* shared_mem10,
-                       void* shared_mem11
-                       )
+TEE_Result PUF_TA_init(void)
 {
+
+    volatile uint8_t *payload_base = (volatile uint8_t *)VMS_PAYLOAD_PTR;
+    volatile GP_Param *params = GP_PARAMS_PTR;
+
     uint8_t raw_g[64];
     uint8_t raw_h[64];
     int ret;
@@ -115,38 +68,25 @@ TEE_Result PUF_TA_init(void* shared_mem0,
     ret = extract_raw_commitment(&h, &raw_h);
     if (ret != 0) return TEE_ERROR_GENERIC;
 
-    LOG_HEXDUMP_DBG(raw_g, 64, "Raw g to be written");
-    LOG_HEXDUMP_DBG(raw_h, 64, "Raw h to be written");
+    LOG_HEXDUMP_DBG(raw_g, 64, "Raw g");
+    LOG_HEXDUMP_DBG(raw_h, 64, "Raw h");
 
-    memcpy(shared_mem0, raw_g +  0, 16);
-    memcpy(shared_mem1, raw_g + 16, 16);
-    memcpy(shared_mem2, raw_g + 32, 16);
-    memcpy(shared_mem3, raw_g + 48, 16);
-    memcpy(shared_mem4, raw_h +  0, 16);
-    memcpy(shared_mem5, raw_h + 16, 16);
-    memcpy(shared_mem6, raw_h + 32, 16);
-    memcpy(shared_mem7, raw_h + 48, 16);
+    memcpy((void *)(payload_base + params[0].a), raw_g + 0,  params[0].b);
+    memcpy((void *)(payload_base + params[1].a), raw_g + 32, params[1].b);
+    memcpy((void *)(payload_base + params[2].a), raw_h + 0,  params[2].b);
+    memcpy((void *)(payload_base + params[3].a), raw_h + 32, params[3].b);
 
     return result;
 }
 
-TEE_Result PUF_TA_get_commitment(void* shared_mem0,
-                                 void* shared_mem1,
-                                 void* shared_mem2,
-                                 void* shared_mem3,
-                                 void* shared_mem4,
-                                 void* shared_mem5,
-                                 void* shared_mem6,
-                                 void* shared_mem7,
-                                 void* shared_mem8,
-                                 void* shared_mem9,
-                                 void* shared_mem10,
-                                 void* shared_mem11
-                                 )
+TEE_Result PUF_TA_get_commitment(void)
 {
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
     } else {
+        volatile uint8_t *payload_base = (volatile uint8_t *)VMS_PAYLOAD_PTR;
+        volatile GP_Param *params = GP_PARAMS_PTR;
+
         int ret;
 
         mbedtls_mpi response_0;
@@ -154,18 +94,18 @@ TEE_Result PUF_TA_get_commitment(void* shared_mem0,
         mbedtls_ecp_point commitment;
 
         uint8_t raw_commitment[64];
-        uint8_t challenge_0[CHALLENGE_SIZE];
-        uint8_t challenge_1[CHALLENGE_SIZE];
+        uint8_t challenge_0[params[0].b];
+        uint8_t challenge_1[params[1].b];
 
         LOG_INF("Reading Challenges");
-        memcpy(&challenge_0, shared_mem0, CHALLENGE_SIZE);
-        memcpy(&challenge_1, shared_mem1, CHALLENGE_SIZE);
-        LOG_HEXDUMP_DBG(challenge_0, CHALLENGE_SIZE, "C1");
-        LOG_HEXDUMP_DBG(challenge_1, CHALLENGE_SIZE, "C2");
+        memcpy(&challenge_0, (const void *)(payload_base + params[0].a), params[0].b);
+        memcpy(&challenge_1, (const void *)(payload_base + params[1].a), params[1].b);
+        LOG_HEXDUMP_DBG(challenge_0, params[0].b, "C1");
+        LOG_HEXDUMP_DBG(challenge_1, params[1].b, "C2");
 
         mbedtls_mpi_init(&response_0);
         mbedtls_mpi_init(&response_1);
-	mbedtls_ecp_point_init(&commitment);
+        mbedtls_ecp_point_init(&commitment);
 
         LOG_INF("Getting Responses and Calculating Commitment");
         ret = get_response_to_challenge(&challenge_0, &response_0);
@@ -193,38 +133,29 @@ TEE_Result PUF_TA_get_commitment(void* shared_mem0,
         LOG_HEXDUMP_DBG(raw_commitment, 64, "Raw COM to be written");
 
         if (ret != 0) return TEE_ERROR_GENERIC;
-        memcpy(shared_mem0, raw_commitment +  0, 16);
-        memcpy(shared_mem1, raw_commitment + 16, 16);
-        memcpy(shared_mem2, raw_commitment + 32, 16);
-        memcpy(shared_mem3, raw_commitment + 48, 16);
+
+        memcpy((void *)(payload_base + params[2].a), raw_commitment + 0,  params[2].b);
+        memcpy((void *)(payload_base + params[3].a), raw_commitment + 32, params[3].b);
+
         return TEE_SUCCESS;
     }
 }
 
-TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
-                                void* shared_mem1,
-                                void* shared_mem2,
-                                void* shared_mem3,
-                                void* shared_mem4,
-                                void* shared_mem5,
-                                void* shared_mem6,
-                                void* shared_mem7,
-                                void* shared_mem8,
-                                void* shared_mem9,
-                                void* shared_mem10,
-                                void* shared_mem11
-                                )
+TEE_Result PUF_TA_get_ZK_proofs(void)
 {
     if(!has_been_initialized){
         return TEE_ERROR_GENERIC;
     } else {
+        volatile uint8_t *payload_base = (volatile uint8_t *)VMS_PAYLOAD_PTR;
+        volatile GP_Param *params = GP_PARAMS_PTR;
+
         int ret;
 
         mbedtls_ecp_point proof_commitment;
 	mbedtls_ecp_point_init(&proof_commitment);
 
         uint8_t raw_proof_commitment[64];
-        uint8_t combined_raw_proof_nonce[64+NONCE_SIZE];
+        uint8_t combined_raw_proof_nonce[64+params[2].b];
         uint8_t hash[32];
 
         mbedtls_mpi alpha;
@@ -251,19 +182,19 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
         mbedtls_mpi_init(&random_val_0);
         mbedtls_mpi_init(&random_val_1);
 
-        uint8_t challenge_0[CHALLENGE_SIZE];
-        uint8_t challenge_1[CHALLENGE_SIZE];
-        uint8_t nonce[NONCE_SIZE];
+        uint8_t challenge_0[params[0].b];
+        uint8_t challenge_1[params[1].b];
+        uint8_t nonce[params[2].b];
 
         LOG_INF("Reading Challenges and Nonce");
 
-        memcpy(&challenge_0, shared_mem0, CHALLENGE_SIZE);
-        memcpy(&challenge_1, shared_mem1, CHALLENGE_SIZE);
-        memcpy(&nonce, shared_mem2, NONCE_SIZE);
+        memcpy(&challenge_0, (const void *)(payload_base + params[0].a), params[0].b);
+        memcpy(&challenge_1, (const void *)(payload_base + params[1].a), params[1].b);
+        memcpy(&nonce,       (const void *)(payload_base + params[2].a), params[2].b);
 
-        LOG_HEXDUMP_DBG(challenge_0, CHALLENGE_SIZE, "C1");
-        LOG_HEXDUMP_DBG(challenge_1, CHALLENGE_SIZE, "C2");
-        LOG_HEXDUMP_DBG(nonce, NONCE_SIZE, "n");
+        LOG_HEXDUMP_DBG(challenge_0, params[0].b, "C1");
+        LOG_HEXDUMP_DBG(challenge_1, params[1].b, "C2");
+        LOG_HEXDUMP_DBG(nonce, params[2].b, "n");
 
         LOG_INF("Getting random values r and u");
 
@@ -288,13 +219,13 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
         if (ret != 0) return TEE_ERROR_GENERIC;
 
         memcpy(combined_raw_proof_nonce, raw_proof_commitment, 64);
-        memcpy(combined_raw_proof_nonce + 64, nonce, NONCE_SIZE);
+        memcpy(combined_raw_proof_nonce + 64, nonce, params[2].b);
 
-        LOG_HEXDUMP_DBG(combined_raw_proof_nonce, 80, "P||n to be hashed");
+        LOG_HEXDUMP_DBG(combined_raw_proof_nonce, (64 + params[2].b), "P||n to be hashed");
 
         LOG_INF("Calculating α");
 
-        mbedtls_sha256(combined_raw_proof_nonce, 64 + NONCE_SIZE, hash, 0);
+        mbedtls_sha256(combined_raw_proof_nonce, 64 + params[2].b, hash, 0);
         ret = mbedtls_mpi_read_binary(&alpha, hash, sizeof(hash));
         if (ret != 0) return TEE_ERROR_GENERIC;
 
@@ -345,18 +276,10 @@ TEE_Result PUF_TA_get_ZK_proofs(void* shared_mem0,
 
         LOG_INF("Writing P, v, w to Shared Memory");
 
-        memcpy(shared_mem0, raw_proof_commitment +  0, 16);
-        memcpy(shared_mem1, raw_proof_commitment + 16, 16);
-        memcpy(shared_mem2, raw_proof_commitment + 32, 16);
-        memcpy(shared_mem3, raw_proof_commitment + 48, 16);
-        memcpy(shared_mem4, raw_result0 +  0, 16);
-        memcpy(shared_mem5, raw_result0 + 16, 16);
-        memcpy(shared_mem6, raw_result0 + 32, 16);
-        memcpy(shared_mem7, raw_result0 + 48, 16);
-        memcpy(shared_mem8, raw_result1 +  0, 16);
-        memcpy(shared_mem9, raw_result1 + 16, 16);
-        memcpy(shared_mem10, raw_result1 + 32, 16);
-        memcpy(shared_mem11, raw_result1 + 48, 16);
+        memcpy((void *)(payload_base + params[0].a), raw_proof_commitment + 0,  params[0].b);
+        memcpy((void *)(payload_base + params[1].a), raw_proof_commitment + 32, params[1].b);
+        memcpy((void *)(payload_base + params[2].a), raw_result0,               params[2].b);
+        memcpy((void *)(payload_base + params[3].a), raw_result1,               params[3].b);
 
         return TEE_SUCCESS;
     }
