@@ -20,8 +20,9 @@
 
 #define VMS_IPC_BASE                    0x20017000UL
 #define VMS_MAX_PARAMS                  4
-#define VMS_IPC_PAYLOAD_SIZE            1024UL
-#define VMS_MEMREF_SLOT_SIZE            (VMS_IPC_PAYLOAD_SIZE / VMS_MAX_PARAMS)
+#define VMS_IPC_FULL_SIZE               0x1000
+#define VMS_USABLE_PAYLOAD_SIZE         ((VMS_IPC_FULL_SIZE - VMS_HEADER_SIZE) & ~0x3UL)
+#define VMS_MEMREF_SLOT_SIZE            (VMS_USABLE_PAYLOAD_SIZE / VMS_MAX_PARAMS)
 
 // ----------------------------------------
 // Struct sizes
@@ -31,6 +32,7 @@
 #define VMS_SESSION_ARGS_SIZE           sizeof(GP_OpenSessionArgs)
 #define VMS_INVOKE_FUNC_ARGS_SIZE       sizeof(GP_InvokeArgs)
 #define VMS_PARAM_SIZE                  (VMS_MAX_PARAMS * sizeof(GP_Param))
+#define VMS_HEADER_SIZE                 (VMS_CALL_TYPE_SIZE + VMS_SESSION_ARGS_SIZE + VMS_INVOKE_FUNC_ARGS_SIZE + VMS_PARAM_SIZE)
 
 // ----------------------------------------
 // Offsets into Shared Memory
@@ -89,7 +91,7 @@ typedef struct __packed {
     GP_OpenSessionArgs session_args;
     GP_InvokeArgs      invoke_args;
     GP_Param           params[VMS_MAX_PARAMS];
-    uint8_t            payload[VMS_IPC_PAYLOAD_SIZE];
+    uint8_t            payload[VMS_USABLE_PAYLOAD_SIZE];
 } GP_SharedMessage;
 
 /* Macro to encode paramTypes field */
@@ -128,5 +130,13 @@ extern volatile GP_SharedMessage *msg;
 extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
 void ipc_notify(int ipc_id, int event_id);
 void ipc_irq_handler(void);
+
+// ----------------------------------------
+// Checks
+// ----------------------------------------
+
+_Static_assert(VMS_HEADER_SIZE < VMS_IPC_FULL_SIZE, "Shared memory header exceeds total size");
+_Static_assert((VMS_USABLE_PAYLOAD_SIZE % 4) == 0, "Payload size must be 4-byte aligned");
+_Static_assert(VMS_USABLE_PAYLOAD_SIZE >= 4 * 256, "VMS_USABLE_PAYLOAD_SIZE must be at least 1024 bytes");
 
 #endif // CROSSCON_HV_CONFIG_H

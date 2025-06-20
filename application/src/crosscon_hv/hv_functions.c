@@ -41,8 +41,7 @@ const func_id_map_t function_table[FUNCTION_TABLE_SIZE] = {
 
 TEE_Result PUF_TA_init(void)
 {
-
-    volatile uint8_t *payload_base = (volatile uint8_t *)VMS_PAYLOAD_PTR;
+    volatile uint8_t *payload_base = VMS_PAYLOAD_PTR;
     volatile GP_Param *params = GP_PARAMS_PTR;
 
     uint8_t raw_g[64];
@@ -68,8 +67,13 @@ TEE_Result PUF_TA_init(void)
     ret = extract_raw_commitment(&h, &raw_h);
     if (ret != 0) return TEE_ERROR_GENERIC;
 
-    LOG_HEXDUMP_DBG(raw_g, 64, "Raw g");
-    LOG_HEXDUMP_DBG(raw_h, 64, "Raw h");
+    // TODO Fix esoteric bug
+    // For some reason these lines started giving a fault exception
+    // on the CROSSCON HV randomly when adding Session Handling logic
+    // LOG_HEXDUMP_DBG(raw_g, 64, "Raw g");
+    // LOG_HEXDUMP_DBG(raw_h, 64, "Raw h");
+
+    LOG_INF("Writing g and h to Shared Memory");
 
     memcpy((void *)(payload_base + params[0].a), raw_g + 0,  params[0].b);
     memcpy((void *)(payload_base + params[1].a), raw_g + 32, params[1].b);
