@@ -124,7 +124,7 @@ TEE_Result handle_invoke_func(volatile GP_InvokeArgs *args,
     return result;
 }
 
-void ipc_irq_handler(void)
+void ipc_irq_ta_handler(void)
 {
     irq_disable(IPC_IRQ_ID);  // Prevent nested handling
     __DMB(); // Ensure memory read ordering before touching shared memory

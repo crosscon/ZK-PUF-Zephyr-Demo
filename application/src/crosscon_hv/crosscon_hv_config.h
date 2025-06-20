@@ -130,7 +130,7 @@ extern volatile GP_SharedMessage *msg;
 
 extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
 void ipc_notify(int ipc_id, int event_id);
-void ipc_irq_handler(void);
+void ipc_irq_ta_handler(void);
 
 // ----------------------------------------
 // Struct for TA-Side session handling metadata
