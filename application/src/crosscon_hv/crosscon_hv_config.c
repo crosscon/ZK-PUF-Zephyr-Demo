@@ -8,6 +8,15 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include <zephyr/kernel.h>
 #include "puf_handler.h"
 
+#define PUF_TA_UUID_BYTES { \
+    0x00, 0x11, 0x22, 0x33, \
+    0x44, 0x55, \
+    0x66, 0x77, \
+    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF \
+}
+
+static const uint8_t PUF_TA_UUID[TEE_UUID_LEN] = PUF_TA_UUID_BYTES;
+
 #define MAX_CALLS_PER_WINDOW 5
 #define TIME_WINDOW_MS (30 * 1000)  // 30 seconds
 
@@ -143,6 +152,13 @@ void ipc_irq_handler(void)
         sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
         break;
 #else
+        // Check if TA_UUID matches, break if doesnt
+        if (memcmp(sargs->uuid, PUF_TA_UUID, TEE_UUID_LEN) != 0) {
+            LOG_WRN("Rejected session: unknown UUID");
+            sargs->ret = TEE_ERROR_ITEM_NOT_FOUND;
+            sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
+            break;
+        }
         int new_sid = allocate_session_id(sargs);
         if (new_sid < 0) {
             sargs->ret = TEE_ERROR_OUT_OF_MEMORY;
