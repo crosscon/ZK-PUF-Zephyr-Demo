@@ -6,6 +6,7 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include "puf_handler.h"
 
 #define MAX_CALLS_PER_WINDOW 5
 #define TIME_WINDOW_MS (30 * 1000)  // 30 seconds
@@ -136,6 +137,12 @@ void ipc_irq_handler(void)
 
     case TEE_CALL_TYPE_OPEN_SESSION: {
 
+#ifndef PUF_HANDLER_H
+        LOG_ERR("PUF support not available — rejecting session.");
+        sargs->ret = TEE_ERROR_NOT_SUPPORTED;
+        sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
+        break;
+#else
         int new_sid = allocate_session_id(sargs);
         if (new_sid < 0) {
             sargs->ret = TEE_ERROR_OUT_OF_MEMORY;
@@ -148,6 +155,7 @@ void ipc_irq_handler(void)
         sargs->ret = TEE_SUCCESS;
         sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
         break;
+#endif
     }
 
     case TEE_CALL_TYPE_CLOSE_SESSION: {
