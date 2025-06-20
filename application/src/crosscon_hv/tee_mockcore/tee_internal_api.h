@@ -42,6 +42,15 @@
 #define TEE_ORIGIN_TEE                    0x00000003
 #define TEE_ORIGIN_TRUSTED_APP            0x00000004
 
+/* Login identifiers */
+#define TEE_IOCTL_LOGIN_PUBLIC            0x00000000
+#define TEE_IOCTL_LOGIN_USER              0x00000001
+#define TEE_IOCTL_LOGIN_GROUP             0x00000002
+// 0x00000003 is unused
+#define TEE_IOCTL_LOGIN_APPLICATION       0x00000004
+#define TEE_IOCTL_LOGIN_USER_APPLICATION  0x00000005
+#define TEE_IOCTL_LOGIN_GROUP_APPLICATION 0x00000006
+
 #define TEE_UUID_LEN 16
 
 typedef uint32_t TEE_Result;

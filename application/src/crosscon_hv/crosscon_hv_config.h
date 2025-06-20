@@ -121,6 +121,7 @@ typedef struct __packed {
 extern volatile struct tee_shm ipc_shm;
 extern volatile struct tee_param param[4];
 extern volatile struct tee_invoke_func_arg arg;
+extern volatile struct tee_open_session_arg session_arg;
 extern volatile GP_SharedMessage *msg;
 
 // ----------------------------------------
@@ -130,6 +131,19 @@ extern volatile GP_SharedMessage *msg;
 extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
 void ipc_notify(int ipc_id, int event_id);
 void ipc_irq_handler(void);
+
+// ----------------------------------------
+// Struct for TA-Side session handling metadata
+// ----------------------------------------
+
+#define MAX_SESSIONS 3
+
+typedef struct {
+    bool     in_use;
+    uint8_t  uuid[TEE_UUID_LEN];
+    uint8_t  clnt_uuid[TEE_UUID_LEN];
+    uint32_t clnt_login;
+} SessionMetadata;
 
 // ----------------------------------------
 // Checks

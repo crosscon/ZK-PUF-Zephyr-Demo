@@ -16,6 +16,8 @@ static int ts_index = 0;
 volatile struct tee_shm ipc_shm;
 volatile struct tee_param param[4] = {0};
 volatile struct tee_invoke_func_arg arg = {0};
+volatile struct tee_open_session_arg session_arg = {0};
+static SessionMetadata sessions[MAX_SESSIONS] = {0};
 
 volatile GP_SharedMessage *msg = (volatile GP_SharedMessage *)VMS_HEADER_PTR;
 
@@ -24,7 +26,22 @@ void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int) =
 
 void ipc_notify(int ipc_id, int event_id)
 {
+
     crosscon_hv_hypercall(CROSSCON_HV_HC_IPC_ID, ipc_id, event_id);
+}
+
+static int allocate_session_id(const GP_OpenSessionArgs *args)
+{
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (!sessions[i].in_use) {
+            memcpy(sessions[i].uuid, args->uuid, TEE_UUID_LEN);
+            memcpy(sessions[i].clnt_uuid, args->clnt_uuid, TEE_UUID_LEN);
+            sessions[i].clnt_login = args->clnt_login;
+            sessions[i].in_use = true;
+            return i;
+        }
+    }
+    return -1;
 }
 
 TEE_Result handle_invoke_func(volatile GP_InvokeArgs *args,
@@ -33,6 +50,12 @@ TEE_Result handle_invoke_func(volatile GP_InvokeArgs *args,
     TEE_Result result = TEE_ERROR_ITEM_NOT_FOUND;
 
     LOG_INF("Received TEE function call: func_id=0x%08X", args->func);
+
+    // Check if session exists
+    if (args->session >= MAX_SESSIONS || !sessions[args->session].in_use) {
+        LOG_WRN("Call on invalid or closed session: %u", args->session);
+        return TEE_ERROR_BAD_STATE;
+    }
 
     // Enforce rate limiting
     uint64_t now = k_uptime_get();
@@ -98,8 +121,9 @@ void ipc_irq_handler(void)
 
     tee_call_type_t call_type = GP_SHARED_MSG_PTR->call_type;
 
-    volatile GP_InvokeArgs *args   = GP_INVOKE_FUNC_ARGS_PTR;
-    volatile GP_Param      *params = GP_PARAMS_PTR;
+    volatile GP_OpenSessionArgs *sargs  = GP_SESSION_ARGS_PTR;
+    volatile GP_InvokeArgs      *args   = GP_INVOKE_FUNC_ARGS_PTR;
+    volatile GP_Param           *params = GP_PARAMS_PTR;
 
     TEE_Result result = TEE_ERROR_GENERIC;
 
@@ -110,13 +134,38 @@ void ipc_irq_handler(void)
         args->ret_origin = TEE_ORIGIN_TRUSTED_APP;
         break;
 
-    case TEE_CALL_TYPE_OPEN_SESSION:
-        LOG_WRN("Session open not yet handled");
-        break;
+    case TEE_CALL_TYPE_OPEN_SESSION: {
 
-    case TEE_CALL_TYPE_CLOSE_SESSION:
-        LOG_WRN("Session close not yet handled");
+        int new_sid = allocate_session_id(sargs);
+        if (new_sid < 0) {
+            sargs->ret = TEE_ERROR_OUT_OF_MEMORY;
+            sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
+            break;
+        }
+
+        LOG_INF("Allocated new session ID %d for client", new_sid);
+        sargs->session = new_sid;
+        sargs->ret = TEE_SUCCESS;
+        sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
         break;
+    }
+
+    case TEE_CALL_TYPE_CLOSE_SESSION: {
+        uint32_t sid = sargs->session;
+
+        if (sid >= MAX_SESSIONS || !sessions[sid].in_use) {
+            sargs->ret = TEE_ERROR_BAD_STATE;
+            sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
+            break;
+        }
+
+        memset(&sessions[sid], 0, sizeof(SessionMetadata));
+        LOG_INF("Closed session ID: %u", sid);
+
+        sargs->ret = TEE_SUCCESS;
+        sargs->ret_origin = TEE_ORIGIN_TRUSTED_APP;
+        break;
+    }
 
     default:
         LOG_WRN("Unknown call type: %d", call_type);
