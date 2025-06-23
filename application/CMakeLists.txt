@@ -7,6 +7,7 @@ project(guest_vm)
 
 target_sources(app PRIVATE src/main.c
                            src/crosscon_hv/crosscon_hv_config.c
+                           src/crosscon_hv/crosscon_hv_tee/crosscon_hv_tee.c
                            )
 
 include_directories(src/
