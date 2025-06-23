@@ -12,7 +12,7 @@
 // Base Config
 // ----------------------------------------
 
-#define IPC_IRQ_ID                      63     //79 on Bao config
+#define IPC_IRQ_ID                      62     //78 on Bao config
 #define CROSSCON_HV_IMAGE_START         0x10000000UL
 #define CROSSCON_HV_HC_OFF              0x41UL
 #define CROSSCON_HV_HC_ADDR             ((uintptr_t)CROSSCON_HV_IMAGE_START + CROSSCON_HV_HC_OFF)
@@ -130,7 +130,7 @@ extern volatile GP_SharedMessage *msg;
 
 extern void (*crosscon_hv_hypercall)(unsigned int, unsigned int, unsigned int);
 void ipc_notify(int ipc_id, int event_id);
-void ipc_irq_ta_handler(void);
+void ipc_irq_client_handler(void);
 
 // ----------------------------------------
 // Struct for TA-Side session handling metadata
