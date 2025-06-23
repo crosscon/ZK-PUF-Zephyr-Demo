@@ -51,32 +51,25 @@ For more info on how to proof/authenticate take a look at [scripts/proofs/README
 
 ## API
 
-The app uses [shared memory regions](./application/src/crosscon_hv/crosscon_hv_config.h)
-and interrupts to communicate with other "VMs" running on
-[CROSSCON Hypervisor](https://github.com/crosscon/CROSSCON-Hypervisor/tree/main).
+The app uses a subset of Global Platform Client API for communication.
 
 An example of client-side communication can be seen at [GUEST_VM0](https://github.com/crosscon/ZK-PUF-Zephyr-Demo/tree/GUEST_VM0)
 branch.
 
-### Function calls
+**TA UUID** - `0x00112233445566778899AABBCCDDEEFF`
 
-|                         | uuid                                 | arg1            | arg2            | arg3            | arg4 | arg5 | arg6 | arg7 | arg8 | arg9 | arg10 | arg11 | arg12 |
-|-------------------------|--------------------------------------|-----------------|-----------------|-----------------|------|------|------|------|------|------|-------|-------|-------|
-| `PUF_TA_init`           | `0x00112233445566778899AABBCCDDEEFF` | NULL            | NULL            | NULL            | NULL | NULL | NULL | NULL | NULL | NULL | NULL  | NULL  | NULL  |
-| `PUF_TA_get_commitment` | `0x112233445566778899AABBCCDDEEFF00` | $C_1$ (16-byte) | $C_1$ (16-byte) | NULL            | NULL | NULL | NULL | NULL | NULL | NULL | NULL  | NULL  | NULL  |
-| `PUF_TA_get_ZK_proofs`  | `0x2233445566778899AABBCCDDEEFF0011` | $C_2$ (16-byte) | $C_2$ (16-byte) | Nonce (16-byte) | NULL | NULL | NULL | NULL | NULL | NULL | NULL  | NULL  | NULL  |
-
-### Function returns
-
-|                         | ret1                          | ret2                           | ret3                          | ret4                           | ret5               | ret6                | ret7               | ret8                | ret9             | ret10             | ret11             | ret12             |
-|-------------------------|-------------------------------|--------------------------------|-------------------------------|--------------------------------|--------------------|---------------------|--------------------|---------------------|------------------|-------------------|-------------------|-------------------|
-| `PUF_TA_init`           | $g_x$ (bytes 0-16)            | $g_x$ (bytes 16-32)            | $g_y$ (bytes 0-16)            | $g_y$ (bytes 16-32)            | $h_x$ (bytes 0-16) | $h_x$ (bytes 16-32) | $h_y$ (bytes 0-16) | $h_y$ (bytes 16-32) | NULL             | NULL              | NULL              | NULL              |
-| `PUF_TA_get_commitment` | $\textit{COM}_x$ (bytes 0-16) | $\textit{COM}_x$ (bytes 16-32) | $\textit{COM}_y$ (bytes 0-16) | $\textit{COM}_y$ (bytes 16-32) | NULL               | NULL                | NULL               | NULL                | NULL             | NULL              | NULL              | NULL              |
-| `PUF_TA_get_ZK_proofs`  | $P_x$ (bytes 0-16)            | $P_x$ (bytes 16-32)            | $P_y$ (bytes 0-16)            | $P_y$ (bytes 16-32)            | $v$ (bytes 0-16)   | $v$ (bytes 16-32)   | $v$ (bytes 32-48)  | $v$ (bytes 48-64)   | $w$ (bytes 0-16) | $w$ (bytes 16-32) | $w$ (bytes 32-48) | $w$ (bytes 48-64) |
+| handler                 | Function ID   | Parameter 1 (`atrr`/`b`)                                      | Parameter 2 (`atrr`/`b`)                                      | Parameter 3 (`atrr`/`b`)                                            | Parameter 4 (`atrr`/`b`)                                          |
+|-------------------------|---------------|---------------------------------------------------------------|---------------------------------------------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------|
+| `PUF_TA_init`           | `0x00112233`  | $g_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)        | $g_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)        | $h_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)              | $h_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)            |
+| `PUF_TA_get_commitment` | `0x11223344`  | $C_1$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INPUT` / 32 bytes)         | $C_2$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INPUT` / 32 bytes)         | $\textit{COM}_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)   | $\textit{COM}_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes) |
+| `PUF_TA_get_ZK_proofs`  | `0x22334455`  | $C_1$ / $P_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INOUT` / 32 bytes) | $C_2$ / $P_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INOUT` / 32 bytes) | $n$ / $v$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INOUT` / 64 bytes)           | $w$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 64 bytes)              |
 
 ## Additional Information
 
-$\textit{COM}$, $g$, $h$ and $P$ are of type ECP point but to be transferrable over a 16-byte aligned channels the first byte from [Mbed TLS's `mbectls_ecp_point`](https://mbed-tls.readthedocs.io/projects/api/en/development/api/struct/structmbedtls__ecp__point/) was stripped. To reconstruct the MbedTLS compatible byte sequence a byte with value `0x04` needs to be prepended. The final structure thus should look like `0x04||X||Y`.
+$\textit{COM}$, $g$, $h$ and $P$ are Eliptic Curve Points derived from
+[Mbed TLS's `mbectls_ecp_point`](https://mbed-tls.readthedocs.io/projects/api/en/development/api/struct/structmbedtls__ecp__point/).
+To reconstruct the MbedTLS compatible byte sequence a byte with value `0x04`
+needs to be prepended. The final structure thus should look like `0x04||X||Y`.
 
 ## License
 
