@@ -71,6 +71,16 @@ $\textit{COM}$, $g$, $h$ and $P$ are Eliptic Curve Points derived from
 To reconstruct the MbedTLS compatible byte sequence a byte with value `0x04`
 needs to be prepended. The final structure thus should look like `0x04||X||Y`.
 
+## Demo's
+
+### Running
+
+![](./doc/gif/running_demo.gif)
+
+### Proof
+
+![](./doc/gif/proof_demo.gif)
+
 ## License
 
 See LICENSE file.
