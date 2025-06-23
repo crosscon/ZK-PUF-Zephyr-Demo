@@ -120,9 +120,10 @@ typedef struct __packed {
 
 extern volatile struct tee_shm ipc_shm;
 extern volatile struct tee_param param[4];
-extern volatile struct tee_invoke_func_arg arg;
+extern volatile struct tee_invoke_func_arg invoke_func_arg;
 extern volatile struct tee_open_session_arg session_arg;
 extern volatile GP_SharedMessage *msg;
+extern int session_id;
 
 // ----------------------------------------
 // Hypervisor Specific Functions
