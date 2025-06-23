@@ -91,21 +91,21 @@ P_raw_hex = P_raw_bytes.hex().upper()
 
 print("P (hex) =", P_raw_hex)
 
-# 9) Reconstruct raw 16-byte n
-print("\nStep 9: Reconstruct raw 16-byte n as hex")
+# 9) Reconstruct raw 64-byte n
+print("\nStep 9: Reconstruct raw 64-byte n as hex")
 
-# Convert to 16-byte big-endian
-nonce_bytes = int(nonce).to_bytes(16, 'big')
+# Convert to 64-byte big-endian
+nonce_bytes = int(nonce).to_bytes(64, 'big')
 
 # Hex-encode (upper-case to match C notation)
 nonce_raw_hex = nonce_bytes.hex().upper()
 
 print("n (hex) =", nonce_raw_hex)
 
-# 10) Build the 80-byte preimage P||n
+# 10) Build the 128-byte preimage P||n
 print("\nStep 10: Preimage (P || nonce) as hex:")
 preimage_bytes = P_raw_bytes + nonce_bytes
-assert len(preimage_bytes) == 80
+assert len(preimage_bytes) == 128
 print(preimage_bytes.hex().upper())
 
 # 11) Compute α
