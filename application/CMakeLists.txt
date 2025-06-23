@@ -17,7 +17,7 @@ target_sources(app PRIVATE src/main.c
 
 include_directories(src/
                     src/crosscon_hv/
-                    src/crosscon_hv/tee_mockcore/
+                    src/crosscon_hv/crosscon_hv_tee/
                     src/puf
                     src/puf/lpc55s69
                     src/crypto/mbedtls/
