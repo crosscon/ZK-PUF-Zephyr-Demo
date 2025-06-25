@@ -7,7 +7,6 @@ project(puf_vm)
 
 target_sources(app PRIVATE src/main.c
                            src/puf/lpc55s69/puf_handler.c
-                           src/puf/lpc55s69/puf_handler_hardcoded_values.c
                            src/puf/puf_prover.c
                            src/crosscon_hv/crosscon_hv_config.c
                            src/crosscon_hv/hv_functions.c
@@ -26,3 +25,5 @@ include_directories(src/
 set(PUF_path $ENV{ZEPHYR_BASE}/../modules/hal/nxp/mcux/mcux-sdk/drivers/puf)
 zephyr_sources(${PUF_path}/fsl_puf.c)
 zephyr_include_directories(${PUF_path})
+
+zephyr_linker_sources(SECTIONS src/puf/lpc55s69/linker_puf_sections.ld)

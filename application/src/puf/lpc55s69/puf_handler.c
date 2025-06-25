@@ -5,14 +5,22 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include <stdio.h>
 #include "puf_handler.h"
 
+puf_config_t pufConfig;
+
 /* These variables are global because while required to reconstruct PUF
  * they're not the PUF response on their own. Only the VM with access to
  * PUF can reconstruct it on the go and flush from memory after handling
  */
-alignas(4) uint8_t activation_code[PUF_ACTIVATION_CODE_SIZE];
-alignas(4) uint8_t key_code[PUF_KEY_CODE_SIZE];
 
-puf_config_t pufConfig;
+/* Placeholder data to be patched in flash after build */
+
+__attribute__((section(".activation_code")))
+__attribute__((used))
+const uint8_t activation_code[PUF_ACTIVATION_CODE_SIZE] = { [0 ... PUF_ACTIVATION_CODE_SIZE-1] = 0x00 };
+
+__attribute__((section(".key_code")))
+__attribute__((used))
+const uint8_t key_code[PUF_KEY_CODE_SIZE] = { [0 ... PUF_KEY_CODE_SIZE-1] = 0x00 };
 
 int init_puf(void)
 {
@@ -20,23 +28,12 @@ int init_puf(void)
 
     status = inner_puf_init();
     if (status != 0) return status;
-
-    if (GENERATE_PUF_STUFF) {
-        status = inner_puf_create_ac(activation_code);
-        if (status != 0) return status;
-    } else {
-        memcpy(activation_code, hardcoded_activation_code, PUF_ACTIVATION_CODE_SIZE);
-    }
+    LOG_HEXDUMP_DBG(activation_code, PUF_ACTIVATION_CODE_SIZE, "Activation Code");
 
     status = inner_puf_start(activation_code);
     if (status != 0) return status;
 
-    if (GENERATE_PUF_STUFF) {
-        status = inner_puf_create_intrinsic_keycode(key_code);
-        if (status != 0) return status;
-    } else {
-        memcpy(key_code, hardcoded_key_code, PUF_KEY_CODE_SIZE);
-    }
+    LOG_HEXDUMP_DBG(key_code, PUF_KEY_CODE_SIZE, "Intrinsic key code");
 
     return 0;
 }
@@ -67,32 +64,6 @@ int inner_puf_init(void)
     return 0;
 }
 
-int inner_puf_create_ac(uint8_t *activation_code)
-{
-    status_t status;
-    memset(activation_code, 0, PUF_ACTIVATION_CODE_SIZE);
-    status = PUF_Enroll(PUF, activation_code, PUF_ACTIVATION_CODE_SIZE);
-
-    if (status != kStatus_Success) {
-        LOG_ERR("Error: PUF enrollment failed!");
-        return status;
-    }
-
-    LOG_INF("PUF Enroll successful. Activation Code created.");
-
-    LOG_HEXDUMP_DBG(activation_code, PUF_ACTIVATION_CODE_SIZE, "Activation Code");
-
-    PUF_Deinit(PUF, &pufConfig);
-    status = PUF_Init(PUF, &pufConfig);
-    if (status != kStatus_Success) {
-        LOG_ERR("Error: PUF reinitialization after enrollment failed!");
-        return status;
-    }
-    LOG_INF("PUF Reinitialized after enrollment.");
-
-    return 0;
-}
-
 int inner_puf_start(uint8_t *activation_code)
 {
     status_t status;
@@ -103,20 +74,6 @@ int inner_puf_start(uint8_t *activation_code)
         return status;
     }
     LOG_INF("PUF Started successfully.");
-
-    return 0;
-}
-
-int inner_puf_create_intrinsic_keycode(uint8_t *key_code)
-{
-    status_t status;
-    status = PUF_SetIntrinsicKey(PUF, kPUF_KeyIndex_01, PUF_KEY_SIZE, key_code, PUF_KEY_CODE_SIZE);
-    if (status != kStatus_Success) {
-        LOG_ERR("Error: PUF Intrinsic key 1 generation failed!");
-        return status;
-    }
-
-    LOG_HEXDUMP_DBG(key_code, PUF_KEY_CODE_SIZE, "Intrinsic key code");
 
     return 0;
 }
