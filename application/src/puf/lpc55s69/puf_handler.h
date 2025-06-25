@@ -4,8 +4,6 @@
 #include "fsl_puf.h"
 #include "puf_prover.h"
 
-#define GENERATE_PUF_STUFF 1
-
 #ifndef PUF_KEY_SIZE
 #define PUF_KEY_SIZE 32         /* Multiples of 8, larger than kPUF_KeySizeM (8), less than kPUF_KeySizeMax (512) */
 #endif

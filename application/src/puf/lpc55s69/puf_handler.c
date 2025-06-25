@@ -4,7 +4,6 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include <stdalign.h>
 #include <stdio.h>
 #include "puf_handler.h"
-#include "flash_handler.h"
 
 /* These variables are global because while required to reconstruct PUF
  * they're not the PUF response on their own. Only the VM with access to
