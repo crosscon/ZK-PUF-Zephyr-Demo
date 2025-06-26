@@ -22,11 +22,13 @@ $$
 g^v \cdot h^w = g^{r+\alpha R_1} \cdot h^{u+\alpha R_2} = g^r \cdot g^{\alpha R_1} \cdot h^u \cdot h^{\alpha R_2} = P \cdot (g^{R_1} \cdot h^{R_2})^{\alpha} = P \cdot \textit{COM}^{\alpha}
 $$
 
-This verification process guarantees the verifier that the prover indeed holds the two PUF
-responses, $R_1$ and $R_2$, and further ensures the session’s freshness. For the zero-knowledge
-proofs $v$ and $w$ to be validated, the prover is required to use the same $\alpha$ as the verifier,
-thereby incorporating the nonce $n$. This mechanism ensures the uniqueness and security
-of each session, effectively preventing replay attacks.
+This verification process guarantees the verifier that the prover indeed holds
+the two PUF responses, $R_1$ and $R_2$, and further ensures the session’s
+freshness. For the zero-knowledge proofs $v$ and $w$ to be validated, the prover
+is required to use the same $\alpha$ as the verifier, thereby incorporating the
+nonce $n$. The $\alpha$ can be reconstructed by the prover from $P$ and $n$.
+This mechanism ensures the uniqueness and security of each session, effectively
+preventing replay attacks.
 
 ## `proof_verifier_calc`
 

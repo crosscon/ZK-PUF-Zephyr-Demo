@@ -17,6 +17,10 @@ Internally produces responses $R_1$ and $R_2$ in response to challenges $C_1$ an
 $C_2$ using the device's [PUF](https://en.wikipedia.org/wiki/Physical_unclonable_function).
 Commits $R_1$ and $R_2$ using Pedersen commitment into $\textit{COM}$ and returns it.
 
+$R_n = \textit{SHA256}(\textit{PUF Response}, C_n)$
+
+$\textit{COM} = g^{R_1} \cdot h^{R_2}$
+
 $\textit{COM}$ can be stored in a public database as it doesn't disclose any information
 on $R_1$ / $R_2$ or device's PUF response.
 
