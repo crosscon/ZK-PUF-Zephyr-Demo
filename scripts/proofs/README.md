@@ -7,7 +7,7 @@ CROSSCON Project:
 
 - [`proof_verifier_calc.sage`](./proof_verifier_calc.sage)
 - [`proof_full_calc.sage`](./proof_full_calc.sage)
-- [`h_generation_calc.sage`](./h_generation_calc.sage)
+- [`hash_to_curve_h_calc.sage`](./hash_to_curve_h_calc.sage)
 
 Scripts can be run with:
 
