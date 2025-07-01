@@ -23,7 +23,7 @@ int log_ecp_point(const char *label, const mbedtls_ecp_point *P)
     return 0;
 }
 
-int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
+int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
 {
     int ret;
     uint8_t puf_key[PUF_KEY_SIZE];
@@ -49,7 +49,7 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
     // Hash the combined data into temporary buffer
     mbedtls_sha256(combined, RESPONSE_SIZE, hash, 0);
 
-    ret = mbedtls_mpi_read_binary(response, hash, sizeof(hash));
+    ret = TEE_BigIntConvertFromBytes(response, hash, sizeof(hash));
     if (ret != 0) {
         LOG_ERR("Error: Can't read hash into MPI: -0x%04X\n", -ret);
         return ret;
@@ -58,7 +58,7 @@ int get_response_to_challenge(uint8_t *challenge, mbedtls_mpi *response)
     return 0;
 }
 
-int get_commited_value(mbedtls_mpi *response_0, mbedtls_mpi *response_1, mbedtls_ecp_point *commitment)
+int get_commited_value(TEE_BigInt *response_0, TEE_BigInt *response_1, mbedtls_ecp_point *commitment)
 {
     int ret;
     ret = mbedtls_ecp_muladd(&grp, commitment, response_0, &g, response_1, &h);

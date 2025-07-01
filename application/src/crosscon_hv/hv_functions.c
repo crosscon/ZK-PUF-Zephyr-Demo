@@ -4,8 +4,12 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include "hv_functions.h"
 #include "puf_handler.h"
 #include "puf_prover.h"
-#include "crypto_handler.h"
+#include "crypto.h"
+#include "tee_core_compat.h"
 #include "crosscon_hv_config.h"
+
+// TODO: map SHA256
+#include "mbedtls/sha256.h"
 
 bool has_been_initialized = false;
 
@@ -93,8 +97,8 @@ TEE_Result PUF_TA_get_commitment(void)
 
         int ret;
 
-        mbedtls_mpi response_0;
-        mbedtls_mpi response_1;
+        TEE_BigInt *response_0 = TEE_BigIntAlloc();
+        TEE_BigInt *response_1 = TEE_BigIntAlloc();
         mbedtls_ecp_point commitment;
 
         uint8_t raw_commitment[64];
@@ -107,26 +111,24 @@ TEE_Result PUF_TA_get_commitment(void)
         LOG_HEXDUMP_DBG(challenge_0, params[0].b, "C1");
         LOG_HEXDUMP_DBG(challenge_1, params[1].b, "C2");
 
-        mbedtls_mpi_init(&response_0);
-        mbedtls_mpi_init(&response_1);
         mbedtls_ecp_point_init(&commitment);
 
         LOG_INF("Getting Responses and Calculating Commitment");
-        ret = get_response_to_challenge(&challenge_0, &response_0);
+        ret = get_response_to_challenge(&challenge_0, response_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_response_to_challenge(&challenge_1, &response_1);
+        ret = get_response_to_challenge(&challenge_1, response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_commited_value(&response_0, &response_1, &commitment);
+        ret = get_commited_value(response_0, response_1, &commitment);
 
         /* Those are secrets that shouldn't be logged outside
          * of development purposes and should be immediately
          * flushed from memory */
 
-        // log_mpi_hex("R1", &response_0);
-        // log_mpi_hex("R2", &response_1);
+        // log_bigint_hex("R1", &response_0);
+        // log_bigint_hex("R2", &response_1);
 
-        mbedtls_mpi_free(&response_0);
-        mbedtls_mpi_free(&response_1);
+        TEE_BigIntFree(response_0);
+        TEE_BigIntFree(response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
 
         log_ecp_point("COM = (R1*g)+(R2*h)", &commitment);
@@ -162,29 +164,22 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
         uint8_t combined_raw_proof_nonce[64+params[2].b];
         uint8_t hash[32];
 
-        mbedtls_mpi alpha;
-        mbedtls_mpi_init(&alpha);
+        TEE_BigInt *alpha = TEE_BigIntAlloc();
 
-        mbedtls_mpi mult_0;
-        mbedtls_mpi mult_1;
-        mbedtls_mpi_init(&mult_0);
-        mbedtls_mpi_init(&mult_1);
+        TEE_BigInt *mult_0 = TEE_BigIntAlloc();
+        TEE_BigInt *mult_1 = TEE_BigIntAlloc();
 
-        mbedtls_mpi result_0;
-        mbedtls_mpi result_1;
-        mbedtls_mpi_init(&result_0);
-        mbedtls_mpi_init(&result_1);
+        TEE_BigInt *result_0 = TEE_BigIntAlloc();
+        TEE_BigInt *result_1 = TEE_BigIntAlloc();
 
         uint8_t raw_result0[64];
         uint8_t raw_result1[64];
 
-        mbedtls_mpi response_0;
-        mbedtls_mpi response_1;
+        TEE_BigInt *response_0 = TEE_BigIntAlloc();
+        TEE_BigInt *response_1 = TEE_BigIntAlloc();
 
-        mbedtls_mpi random_val_0; // r
-        mbedtls_mpi random_val_1; // u
-        mbedtls_mpi_init(&random_val_0);
-        mbedtls_mpi_init(&random_val_1);
+        TEE_BigInt *random_val_0 = TEE_BigIntAlloc(); // r
+        TEE_BigInt *random_val_1 = TEE_BigIntAlloc(); // u
 
         uint8_t challenge_0[params[0].b];
         uint8_t challenge_1[params[1].b];
@@ -202,21 +197,21 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         LOG_INF("Getting random values r and u");
 
-        ret = get_random_mpi(&random_val_0);
+        ret = get_random_bigint(random_val_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_random_mpi(&random_val_1);
+        ret = get_random_bigint(random_val_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
 
         /* Those are secrets that shouldn't be logged outside
          * of development purposes and should be immediately
          * flushed from memory */
 
-        // log_mpi_hex("r", &random_val_0);
-        // log_mpi_hex("u", &random_val_1);
+        // log_bigint_hex("r", random_val_0);
+        // log_bigint_hex("u", random_val_1);
 
         LOG_INF("Calculating P");
 
-        ret = get_commited_value(&random_val_0, &random_val_1, &proof_commitment);
+        ret = get_commited_value(random_val_0, random_val_1, &proof_commitment);
         log_ecp_point("P = (r*g)+(u*h)", &proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = extract_raw_commitment(&proof_commitment, &raw_proof_commitment);
@@ -230,48 +225,48 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
         LOG_INF("Calculating α");
 
         mbedtls_sha256(combined_raw_proof_nonce, 64 + params[2].b, hash, 0);
-        ret = mbedtls_mpi_read_binary(&alpha, hash, sizeof(hash));
+        ret = TEE_BigIntConvertFromBytes(alpha, hash, sizeof(hash));
         if (ret != 0) return TEE_ERROR_GENERIC;
 
-        log_mpi_hex("α = H(P,n)", &alpha);
+        log_bigint_hex("α = H(P,n)", alpha);
 
-        mbedtls_mpi_init(&response_0);
-        mbedtls_mpi_init(&response_1);
+        TEE_BigIntFree(response_0);
+        TEE_BigIntFree(response_1);
 
         LOG_INF("Calculating v, w");
 
-        ret = get_response_to_challenge(&challenge_0, &response_0);
+        ret = get_response_to_challenge(&challenge_0, response_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_response_to_challenge(&challenge_1, &response_1);
+        ret = get_response_to_challenge(&challenge_1, response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = mbedtls_mpi_mul_mpi(&mult_0, &alpha, &response_0);
-        ret = mbedtls_mpi_mul_mpi(&mult_1, &alpha, &response_1);
+        ret = TEE_BigIntMul(mult_0, alpha, response_0);
+        ret = TEE_BigIntMul(mult_1, alpha, response_1);
 
 
         /* Those are secrets that shouldn't be logged outside
          * of development purposes and should be immediately
          * flushed from memory */
 
-        // log_mpi_hex("R1", &response_0);
-        // log_mpi_hex("R2", &response_1);
+        // log_bigint_hex("R1", response_0);
+        // log_bigint_hex("R2", response_1);
 
-        // log_mpi_hex("αR1", &mult_0);
-        // log_mpi_hex("αR2", &mult_1);
+        // log_bigint_hex("αR1", mult_0);
+        // log_bigint_hex("αR2", mult_1);
 
-        ret = mbedtls_mpi_add_mpi(&result_0, &random_val_0, &mult_0);
-        ret = mbedtls_mpi_add_mpi(&result_1, &random_val_1, &mult_1);
+        ret = TEE_BigIntAdd(result_0, random_val_0, mult_0);
+        ret = TEE_BigIntAdd(result_1, random_val_1, mult_1);
 
-        mbedtls_mpi_free(&response_0);
-        mbedtls_mpi_free(&response_1);
+        TEE_BigIntFree(response_0);
+        TEE_BigIntFree(response_1);
 
-        mbedtls_mpi_free(&mult_0);
-        mbedtls_mpi_free(&mult_1);
+        TEE_BigIntFree(mult_0);
+        TEE_BigIntFree(mult_1);
 
-        log_mpi_hex("v = r+αR1", &result_0);
-        log_mpi_hex("w = u+αR2", &result_1);
+        log_bigint_hex("v = r+αR1", result_0);
+        log_bigint_hex("w = u+αR2", result_1);
 
-        mbedtls_mpi_write_binary(&result_0, raw_result0, 64);
-        mbedtls_mpi_write_binary(&result_1, raw_result1, 64);
+        TEE_BigIntConvertToBytes(result_0, raw_result0, 64);
+        TEE_BigIntConvertToBytes(result_1, raw_result1, 64);
 
         LOG_HEXDUMP_DBG(raw_proof_commitment, 64, "Raw P to be written");
 
