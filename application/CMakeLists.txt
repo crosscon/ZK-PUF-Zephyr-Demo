@@ -18,7 +18,7 @@ include_directories(src/
                     src/crosscon_hv/crosscon_hv_tee/
                     src/puf
                     src/puf/lpc55s69
-                    src/crypto/mbedtls/
+                    src/crypto
                     )
 
 # Include the fsl_puf driver in HAL_NXP

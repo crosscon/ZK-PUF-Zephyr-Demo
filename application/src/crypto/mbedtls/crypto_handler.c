@@ -1,17 +1,77 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(PUF_VM);
 
-#include "crypto_handler.h"
+#include "crypto.h"
 #include <zephyr/random/random.h>
 
-#define MBEDTLS_HEAP_SIZE  8192
+// ----------------------------------------
+// TEE_BigInt mapping
+// ----------------------------------------
+
+struct TEE_BigInt {
+    mbedtls_mpi mpi;
+};
+
+TEE_BigInt* TEE_BigIntAlloc(void) {
+    TEE_BigInt *x = malloc(sizeof(TEE_BigInt));
+    if (x) mbedtls_mpi_init(&x->mpi);
+    return x;
+}
+
+void TEE_BigIntInit(TEE_BigInt *X) {
+    if (X) {
+        mbedtls_mpi_init(&X->mpi);
+    }
+}
+
+void TEE_BigIntFree(TEE_BigInt *X) {
+    if (X) {
+        mbedtls_mpi_free(&X->mpi);
+        free(X);
+    }
+}
+
+TEE_Result TEE_BigIntConvertFromBytes(TEE_BigInt *X, const uint8_t *buf, size_t len) {
+    if (!X || !buf || len > TEE_MAX_BIGINT_BYTES) return TEE_ERROR_BAD_PARAMETERS;
+    return mbedtls_mpi_read_binary(&X->mpi, buf, len);
+}
+
+TEE_Result TEE_BigIntConvertToBytes(const TEE_BigInt *X, uint8_t *buf, size_t len) {
+    if (!X || !buf || len > TEE_MAX_BIGINT_BYTES) return TEE_ERROR_BAD_PARAMETERS;
+    return mbedtls_mpi_write_binary(&X->mpi, buf, len);
+}
+
+TEE_Result TEE_BigIntMul(TEE_BigInt *R, const TEE_BigInt *A, const TEE_BigInt *B) {
+    return mbedtls_mpi_mul_mpi(&R->mpi, &A->mpi, &B->mpi);
+}
+
+TEE_Result TEE_BigIntAdd(TEE_BigInt *R, const TEE_BigInt *A, const TEE_BigInt *B) {
+    return mbedtls_mpi_add_mpi(&R->mpi, &A->mpi, &B->mpi);
+}
+
+TEE_Result TEE_BigIntMod(TEE_BigInt *R, const TEE_BigInt *A, const TEE_BigInt *N) {
+    return mbedtls_mpi_mod_mpi(&R->mpi, &A->mpi, &N->mpi);
+}
+
+TEE_Result TEE_BigIntGenerateRandom(TEE_BigInt *X, size_t num_bytes,
+                                    int (*f_rng)(void *, unsigned char *, size_t),
+                                    void *p_rng) {
+    return mbedtls_mpi_fill_random(&X->mpi, num_bytes, f_rng, p_rng);
+}
+
+size_t TEE_BigIntSizeInBytes(const TEE_BigInt *X) {
+    return mbedtls_mpi_size(&X->mpi);
+}
+
+// ----------------------------------------
+// Crypto functions
+// ----------------------------------------
+
 #define MAX_HASH_TRIES 10
 
 mbedtls_ecp_point h;
 mbedtls_ecp_point g;
 mbedtls_ecp_group grp;
-
-static unsigned char mbedtls_heap[MBEDTLS_HEAP_SIZE] __aligned(4);
 
 int init_crypto()
 {
@@ -21,12 +81,11 @@ int init_crypto()
     mbedtls_ecp_point_init(&h);
     mbedtls_ecp_group_init(&grp);
 
-    mbedtls_memory_buffer_alloc_init(mbedtls_heap, sizeof(mbedtls_heap));
     ret = inner_init_ECC(&grp, &h, &g);
     if (ret != 0) return ret;
 }
 
-void log_mpi_hex(const char *label, const mbedtls_mpi *X)
+void log_bigint_hex(const char *label, const TEE_BigInt *X)
 {
     /* How many bytes we need to represent X in big-endian */
     size_t n_bytes = mbedtls_mpi_size(X);
@@ -46,11 +105,11 @@ void log_mpi_hex(const char *label, const mbedtls_mpi *X)
 
 int rand_function(void *rng_state, unsigned char *output, size_t len) {
     (void)rng_state;
-    sys_csrand_get(output, len);  
+    sys_csrand_get(output, len);
     return 0;
 }
 
-int get_random_mpi(mbedtls_mpi *X)
+int get_random_bigint(TEE_BigInt *X)
 {
     int ret;
     size_t n_bytes = mbedtls_mpi_size(&grp.N);

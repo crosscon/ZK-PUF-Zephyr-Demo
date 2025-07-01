@@ -7,6 +7,7 @@
 #include <cmsis_core.h>
 #include <zephyr/drivers/tee.h>
 #include "tee_internal_api.h"
+#include "tee_core_compat.h"
 
 // ----------------------------------------
 // Base Config
