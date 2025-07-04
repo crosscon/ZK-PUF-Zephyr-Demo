@@ -170,16 +170,8 @@ int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint
     return tee_invoke_func(tee_dev, &invoke_func_arg, 4, &param);
 }
 
-void vm_init() {
-    IRQ_CONNECT(IPC_IRQ_ID, 0, ipc_irq_client_handler, NULL, 0);
-    irq_enable(IPC_IRQ_ID);
-    LOG_INF("VM Initialized");
-}
-
 int main(void)
 {
-    vm_init();
-
     LOG_INF("Initializing TEE");
 
     /* Init CROSSCON HV TEE */
@@ -211,8 +203,6 @@ int main(void)
 
     LOG_INF("TEE Initialized");
 
-    k_msleep(200);
-
     LOG_INF("Opening Session");
 
     /* Fill in session_arg */
@@ -229,12 +219,9 @@ int main(void)
 
     LOG_INF("Session opened: ID = %u", session_id);
 
-    k_msleep(200);
-
     LOG_INF("Calling PUF_TA_init");
 
     res = call_puf_ta_init(tee_dev, session_id);
-    k_msleep(400); // Give time to process, wait for interrupt
     if (res != 0) {
         LOG_ERR("calling PUF_TA_init failed: res=%d, TEE_ret=0x%08x", res, session_arg.ret);
         return -1;
@@ -243,7 +230,6 @@ int main(void)
     LOG_INF("Calling PUF_TA_get_commitment");
 
     res = call_puf_ta_get_commitment(tee_dev, session_id, shm_ptr);
-    k_msleep(400); // Give time to process, wait for interrupt
     if (res != 0) {
         LOG_ERR("calling PUF_TA_get_commitment failed: res=%d, TEE_ret=0x%08x", res, session_arg.ret);
         return -1;
@@ -252,7 +238,6 @@ int main(void)
     LOG_INF("Calling PUF_TA_get_ZK_proofs");
 
     res = call_puf_ta_get_zk_proofs(tee_dev, session_id, shm_ptr);
-    k_msleep(400); // Give time to process, wait for interrupt
     if (res != 0) {
         LOG_ERR("calling PUF_TA_get_ZK_proofs failed: res=%d, TEE_ret=0x%08x", res, session_arg.ret);
         return -1;

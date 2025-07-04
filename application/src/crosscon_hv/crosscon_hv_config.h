@@ -6,6 +6,7 @@
 #include <zephyr/irq.h>
 #include <cmsis_core.h>
 #include <zephyr/drivers/tee.h>
+#include <zephyr/kernel.h>
 #include "tee_internal_api.h"
 
 // ----------------------------------------
@@ -124,6 +125,7 @@ extern volatile struct tee_invoke_func_arg invoke_func_arg;
 extern volatile struct tee_open_session_arg session_arg;
 extern volatile GP_SharedMessage *msg;
 extern int session_id;
+extern struct k_sem tee_response_sem;
 
 // ----------------------------------------
 // Hypervisor Specific Functions

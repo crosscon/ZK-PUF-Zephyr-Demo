@@ -1,5 +1,6 @@
 #include "crosscon_hv_config.h"
 #include <zephyr/logging/log.h>
+#include <zephyr/kernel.h>
 LOG_MODULE_DECLARE(CROSSCON_HV_TEE);
 
 #define TEE_IMPL_ID 1
@@ -54,6 +55,7 @@ static int crosscon_hv_tee_open_session(const struct device *dev, struct tee_ope
 				  unsigned int num_param, struct tee_param *param,
 				  uint32_t *session_id)
 {
+    TEE_Result ret;
     msg->call_type                = TEE_CALL_TYPE_OPEN_SESSION;
     /* Write tee_open_session_arg fields into session_args */
     // uuid and clnt_uuid are arrays so we use memcpy
@@ -87,11 +89,17 @@ static int crosscon_hv_tee_open_session(const struct device *dev, struct tee_ope
     /* Signal the remote TEE to begin processing */
     ipc_notify(0, 0);
 
-    return 0;
+    // Wait until IRQ handler signals that processing is done
+    k_sem_take(&tee_response_sem, K_FOREVER);
+
+    ret = msg->session_args.ret;
+
+    return ret;
 };
 
 static int crosscon_hv_tee_close_session(const struct device *dev, uint32_t session_id)
 {
+    TEE_Result ret;
     msg->call_type               = TEE_CALL_TYPE_CLOSE_SESSION;
     /* There's no tee_close_session_arg fields so we're using session_args */
     memset(&msg->session_args, 0, sizeof(GP_OpenSessionArgs));
@@ -100,7 +108,12 @@ static int crosscon_hv_tee_close_session(const struct device *dev, uint32_t sess
     /* Signal the remote TEE to begin processing */
     ipc_notify(0, 0);
 
-    return 0;
+    // Wait until IRQ handler signals that processing is done
+    k_sem_take(&tee_response_sem, K_FOREVER);
+
+    ret = msg->session_args.ret;
+
+    return ret;
 };
 
 static int crosscon_hv_tee_cancel(const struct device *dev, uint32_t session_id, uint32_t cancel_id)
@@ -114,6 +127,7 @@ static int crosscon_hv_tee_invoke_func(const struct device *dev,
                                        unsigned int num_param,
                                        struct tee_param *param)
 {
+    TEE_Result ret;
     msg->call_type               = TEE_CALL_TYPE_INVOKE_FUNC;
     /* Write tee_invoke_func_arg fields into invoke_args */
     msg->invoke_args.func        = arg->func;
@@ -146,7 +160,12 @@ static int crosscon_hv_tee_invoke_func(const struct device *dev,
     /* Signal the remote TEE to begin processing */
     ipc_notify(0, 0);
 
-    return 0;
+    // Wait until IRQ handler signals that processing is done
+    k_sem_take(&tee_response_sem, K_FOREVER);
+
+    ret = msg->invoke_args.ret;
+
+    return ret;
 }
 
 
@@ -176,6 +195,9 @@ static int crosscon_hv_tee_suppl_send(const struct device *dev, unsigned int ret
 static int crosscon_hv_tee_init(const struct device *dev)
 {
     msg = GP_SHARED_MSG_PTR;
+    IRQ_CONNECT(IPC_IRQ_ID, 0, ipc_irq_client_handler, NULL, 0);
+    irq_enable(IPC_IRQ_ID);
+    k_sem_init(&tee_response_sem, 0, 1);  // start locked
     return 0;
 }
 

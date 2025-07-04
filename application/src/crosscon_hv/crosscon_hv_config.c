@@ -11,6 +11,7 @@ volatile struct tee_param param[4] = {0};
 volatile struct tee_invoke_func_arg invoke_func_arg = {0};
 volatile struct tee_open_session_arg session_arg = {0};
 int session_id;
+struct k_sem tee_response_sem;
 
 // Init as NULL and when crosscon_hv_tee gets initialized assign value
 volatile GP_SharedMessage *msg = NULL;
@@ -90,12 +91,24 @@ void ipc_irq_client_handler(void)
             }
             break;
         case TEE_CALL_TYPE_OPEN_SESSION:
-            session_id = msg->session_args.session;
+            session_arg.ret        = msg->session_args.ret;
+            session_arg.ret_origin = msg->session_args.ret_origin;
+            LOG_INF("TEE returned: ret = 0x%08X, origin = 0x%08X", session_arg.ret, session_arg.ret_origin);
+            if (session_arg.ret != TEE_SUCCESS) {
+                LOG_ERR("Failed opening sesssion");
+            }
+            else {
+                session_id = msg->session_args.session;
+            }
             break;
         case TEE_CALL_TYPE_CLOSE_SESSION:
+            session_arg.ret        = msg->session_args.ret;
+            session_arg.ret_origin = msg->session_args.ret_origin;
+            LOG_INF("TEE returned: ret = 0x%08X, origin = 0x%08X", session_arg.ret, session_arg.ret_origin);
             break;
     }
 
     __DMB(); // Ensure all writes complete before notifying
     LOG_INF("IRQ Handled.");
+    k_sem_give(&tee_response_sem);
 }
