@@ -1,5 +1,5 @@
 #include <zephyr/logging/log.h>
-LOG_MODULE_DECLARE(GUEST_VM);
+LOG_MODULE_DECLARE(CROSSCON_HV_TEE);
 
 #include "crosscon_hv_config.h"
 #include <stdio.h>
@@ -36,7 +36,7 @@ void ipc_irq_client_handler(void)
             invoke_func_arg.ret        = msg->invoke_args.ret;
             invoke_func_arg.ret_origin = msg->invoke_args.ret_origin;
 
-            LOG_INF("TEE returned: ret = 0x%08X, origin = 0x%08X", invoke_func_arg.ret, invoke_func_arg.ret_origin);
+            LOG_DBG("TEE returned: ret = 0x%08X, origin = 0x%08X", invoke_func_arg.ret, invoke_func_arg.ret_origin);
 
             for (int i = 0; i < VMS_MAX_PARAMS; i++) {
                 uint64_t attr = msg->params[i].attr;
@@ -74,18 +74,18 @@ void ipc_irq_client_handler(void)
                     break;
                 }
 
-                LOG_INF("Param[%d] type: %s", i, type_str);
+                LOG_DBG("Param[%d] type: %s", i, type_str);
 
                 if (type == TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT ||
                     type == TEE_PARAM_ATTR_TYPE_MEMREF_INOUT) {
 
                     const volatile uint8_t *data = &msg->payload[param[i].a];
-                    LOG_HEXDUMP_INF((const uint8_t *)data, param[i].b,
+                    LOG_HEXDUMP_DBG((const uint8_t *)data, param[i].b,
                                     "MEMREF Output data:");
                 } else if (type == TEE_PARAM_ATTR_TYPE_VALUE_OUTPUT ||
                            type == TEE_PARAM_ATTR_TYPE_VALUE_INOUT) {
 
-                    LOG_INF("Value: a = 0x%08llX, b = 0x%08llX",
+                    LOG_DBG("Value: a = 0x%08llX, b = 0x%08llX",
                             param[i].a, param[i].b);
                 }
             }

@@ -1,5 +1,5 @@
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(GUEST_VM, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(GUEST_VM);
 
 #include <stdio.h>
 #include "crosscon_hv_config.h"

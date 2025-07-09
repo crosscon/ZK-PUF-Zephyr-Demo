@@ -1,7 +1,7 @@
 #include "crosscon_hv_config.h"
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
-LOG_MODULE_DECLARE(CROSSCON_HV_TEE);
+LOG_MODULE_REGISTER(CROSSCON_HV_TEE);
 
 #define TEE_IMPL_ID 1
 
