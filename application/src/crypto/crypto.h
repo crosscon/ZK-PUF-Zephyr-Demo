@@ -2,7 +2,6 @@
 #define CRYPTO_H
 
 #include "tee_core_compat.h"
-#include "mbedtls/ecp.h"
 
 extern TEE_ECPoint *h;
 extern TEE_ECPoint *g;

@@ -11,6 +11,7 @@
 typedef struct TEE_BigInt TEE_BigInt;
 typedef struct TEE_ECPoint TEE_ECPoint;
 typedef struct TEE_ECCurve TEE_ECCurve;
+typedef struct TEE_DigestOperation TEE_DigestOperation;
 
 /* BigInt operations (backend defined in crypto_handler.c) */
 TEE_BigInt* TEE_BigIntAlloc(void);  // Required for forward declaration
@@ -41,5 +42,14 @@ TEE_Result   TEE_ECPointMulAdd(TEE_ECPoint *R,
 /* ECCurve operations (backend defined in crypto_handler.c) */
 TEE_ECCurve* TEE_ECCurveAlloc(void);
 void         TEE_ECCurveFree(TEE_ECCurve *curve);
+
+/* Digest operation for SHA-256 */
+TEE_DigestOperation* TEE_AllocateDigestOperation(void);
+void TEE_FreeDigestOperation(TEE_DigestOperation *op);
+TEE_Result TEE_DigestUpdate(TEE_DigestOperation *op,
+                            const void *data, size_t len);
+TEE_Result TEE_DigestDoFinal(TEE_DigestOperation *op,
+                             const void *data, size_t len,
+                             uint8_t *digest, size_t *digest_len);
 
 #endif // TEE_CORE_COMPAT_H

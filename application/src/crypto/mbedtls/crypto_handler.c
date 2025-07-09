@@ -3,6 +3,8 @@ LOG_MODULE_DECLARE(PUF_VM);
 
 #include "crypto.h"
 #include <zephyr/random/random.h>
+#include "mbedtls/sha256.h"
+#include "mbedtls/ecp.h"
 
 // ----------------------------------------
 // TEE_BigInt mapping
@@ -131,6 +133,50 @@ TEE_Result TEE_ECPointMulAdd(TEE_ECPoint *R,
         return TEE_ERROR_GENERIC;
     }
 
+    return TEE_SUCCESS;
+}
+
+// ----------------------------------------
+// TEE_Digest mapping (SHA-256)
+// ----------------------------------------
+
+struct TEE_DigestOperation {
+    mbedtls_sha256_context ctx;
+    bool is_finalized;
+};
+
+TEE_DigestOperation* TEE_AllocateDigestOperation(void) {
+    TEE_DigestOperation *op = malloc(sizeof(TEE_DigestOperation));
+    if (!op) return NULL;
+    mbedtls_sha256_init(&op->ctx);
+    mbedtls_sha256_starts(&op->ctx, 0 /* is224 = 0 -> SHA-256 */);
+    op->is_finalized = false;
+
+    return op;
+}
+
+void TEE_FreeDigestOperation(TEE_DigestOperation *op) {
+    if (!op) return;
+    mbedtls_sha256_free(&op->ctx);
+    free(op);
+}
+
+TEE_Result TEE_DigestUpdate(TEE_DigestOperation *op,
+                            const void *data, size_t len) {
+    if (!op || op->is_finalized) return TEE_ERROR_BAD_PARAMETERS;
+    mbedtls_sha256_update(&op->ctx, data, len);
+    return TEE_SUCCESS;
+}
+
+TEE_Result TEE_DigestDoFinal(TEE_DigestOperation *op,
+                             const void *data, size_t len,
+                             uint8_t *digest, size_t *digest_len) {
+    if (!op || !digest || !digest_len) return TEE_ERROR_BAD_PARAMETERS;
+    if (data && len) mbedtls_sha256_update(&op->ctx, data, len);
+
+    mbedtls_sha256_finish(&op->ctx, digest);
+    *digest_len = 32;
+    op->is_finalized = true;
     return TEE_SUCCESS;
 }
 

@@ -8,9 +8,6 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include "tee_core_compat.h"
 #include "crosscon_hv_config.h"
 
-// TODO: map SHA256
-#include "mbedtls/sha256.h"
-
 bool has_been_initialized = false;
 
 const func_id_map_t function_table[FUNCTION_TABLE_SIZE] = {
@@ -162,6 +159,7 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
         uint8_t raw_proof_commitment[64];
         uint8_t combined_raw_proof_nonce[64+params[2].b];
         uint8_t hash[32];
+        size_t hash_len = sizeof(hash);
 
         TEE_BigInt *alpha = TEE_BigIntAlloc();
 
@@ -179,6 +177,8 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         TEE_BigInt *random_val_0 = TEE_BigIntAlloc(); // r
         TEE_BigInt *random_val_1 = TEE_BigIntAlloc(); // u
+
+        TEE_DigestOperation *digest = TEE_AllocateDigestOperation();
 
         uint8_t challenge_0[params[0].b];
         uint8_t challenge_1[params[1].b];
@@ -213,7 +213,7 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
         ret = get_commited_value(random_val_0, random_val_1, proof_commitment);
         log_ecp_point("P = (r*g)+(u*h)", proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = extract_raw_commitment(&proof_commitment, &raw_proof_commitment);
+        ret = extract_raw_commitment(proof_commitment, &raw_proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
 
         memcpy(combined_raw_proof_nonce, raw_proof_commitment, 64);
@@ -223,8 +223,13 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         LOG_INF("Calculating α");
 
-        mbedtls_sha256(combined_raw_proof_nonce, 64 + params[2].b, hash, 0);
-        ret = TEE_BigIntConvertFromBytes(alpha, hash, sizeof(hash));
+        ret = TEE_DigestUpdate(digest, combined_raw_proof_nonce, 64 + params[2].b);
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        ret = TEE_DigestDoFinal(digest, NULL, 0, hash, &hash_len);
+        if (ret != 0) return TEE_ERROR_GENERIC;
+        TEE_FreeDigestOperation(digest);
+
+        ret = TEE_BigIntConvertFromBytes(alpha, hash, hash_len);
         if (ret != 0) return TEE_ERROR_GENERIC;
 
         log_bigint_hex("α = H(P,n)", alpha);

@@ -5,10 +5,12 @@ LOG_MODULE_DECLARE(PUF_VM);
 
 int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
 {
+    TEE_DigestOperation *digest = TEE_AllocateDigestOperation();
     int ret;
     uint8_t puf_key[PUF_KEY_SIZE];
     uint8_t combined[RESPONSE_SIZE];
     uint8_t hash[32];
+    size_t hash_len = sizeof(hash);
 
     ret = puf_get_key(&puf_key);
     if(ret!=0){
@@ -27,9 +29,13 @@ int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
     }
 
     // Hash the combined data into temporary buffer
-    mbedtls_sha256(combined, RESPONSE_SIZE, hash, 0);
+    ret = TEE_DigestUpdate(digest, combined, RESPONSE_SIZE);
+    if (ret != 0) return ret;
+    ret = TEE_DigestDoFinal(digest, NULL, 0, hash, &hash_len);
+    if (ret != 0) return ret;
+    TEE_FreeDigestOperation(digest);
 
-    ret = TEE_BigIntConvertFromBytes(response, hash, sizeof(hash));
+    ret = TEE_BigIntConvertFromBytes(response, hash, hash_len);
     if (ret != 0) {
         LOG_ERR("Error: Can't read hash into MPI: -0x%04X\n", -ret);
         return ret;
