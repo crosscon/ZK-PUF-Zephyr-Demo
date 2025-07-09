@@ -9,6 +9,8 @@
 
 /* Forward declaration (backend defined in crypto_handler.c) */
 typedef struct TEE_BigInt TEE_BigInt;
+typedef struct TEE_ECPoint TEE_ECPoint;
+typedef struct TEE_ECCurve TEE_ECCurve;
 
 /* BigInt operations (backend defined in crypto_handler.c) */
 TEE_BigInt* TEE_BigIntAlloc(void);  // Required for forward declaration
@@ -22,5 +24,22 @@ TEE_Result  TEE_BigIntGenerateRandom(TEE_BigInt *X, size_t num_bytes,
                                      int (*f_rng)(void *, unsigned char *, size_t),
                                      void *p_rng);
 size_t      TEE_BigIntSizeInBytes(const TEE_BigInt *X);
+
+/* ECPoint operations (backend defined in crypto_handler.c) */
+TEE_ECPoint* TEE_ECPointAlloc(void);
+void         TEE_ECPointFree(TEE_ECPoint *pt);
+TEE_Result   TEE_ECPointExportBytes(const TEE_ECPoint *pt,
+                                    const TEE_ECCurve *curve,
+                                    uint8_t *buf, size_t *len);
+TEE_Result   TEE_ECPointMulAdd(TEE_ECPoint *R,
+                               const TEE_ECCurve *curve,
+                               const TEE_BigInt *m,
+                               const TEE_ECPoint *P,
+                               const TEE_BigInt *n,
+                               const TEE_ECPoint *Q);
+
+/* ECCurve operations (backend defined in crypto_handler.c) */
+TEE_ECCurve* TEE_ECCurveAlloc(void);
+void         TEE_ECCurveFree(TEE_ECCurve *curve);
 
 #endif // TEE_CORE_COMPAT_H

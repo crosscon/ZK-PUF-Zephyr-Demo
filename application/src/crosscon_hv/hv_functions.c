@@ -64,11 +64,13 @@ TEE_Result PUF_TA_init(void)
     } else {
         result = TEE_ERROR_BAD_STATE;
     }
-    log_ecp_point("g", &g);
-    log_ecp_point("h", &h);
-    ret = extract_raw_commitment(&g, &raw_g);
+
+    log_ecp_point("g", g);
+    log_ecp_point("h", h);
+
+    ret = extract_raw_commitment(g, &raw_g);
     if (ret != 0) return TEE_ERROR_GENERIC;
-    ret = extract_raw_commitment(&h, &raw_h);
+    ret = extract_raw_commitment(h, &raw_h);
     if (ret != 0) return TEE_ERROR_GENERIC;
 
     // TODO Fix esoteric bug
@@ -99,7 +101,7 @@ TEE_Result PUF_TA_get_commitment(void)
 
         TEE_BigInt *response_0 = TEE_BigIntAlloc();
         TEE_BigInt *response_1 = TEE_BigIntAlloc();
-        mbedtls_ecp_point commitment;
+        TEE_ECPoint *commitment = TEE_ECPointAlloc();
 
         uint8_t raw_commitment[64];
         uint8_t challenge_0[params[0].b];
@@ -111,14 +113,12 @@ TEE_Result PUF_TA_get_commitment(void)
         LOG_HEXDUMP_DBG(challenge_0, params[0].b, "C1");
         LOG_HEXDUMP_DBG(challenge_1, params[1].b, "C2");
 
-        mbedtls_ecp_point_init(&commitment);
-
         LOG_INF("Getting Responses and Calculating Commitment");
         ret = get_response_to_challenge(&challenge_0, response_0);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = get_response_to_challenge(&challenge_1, response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_commited_value(response_0, response_1, &commitment);
+        ret = get_commited_value(response_0, response_1, commitment);
 
         /* Those are secrets that shouldn't be logged outside
          * of development purposes and should be immediately
@@ -131,10 +131,10 @@ TEE_Result PUF_TA_get_commitment(void)
         TEE_BigIntFree(response_1);
         if (ret != 0) return TEE_ERROR_GENERIC;
 
-        log_ecp_point("COM = (R1*g)+(R2*h)", &commitment);
+        log_ecp_point("COM = (R1*g)+(R2*h)", commitment);
 
         LOG_INF("Writing Commitment to Shared Memory");
-        ret = extract_raw_commitment(&commitment, &raw_commitment);
+        ret = extract_raw_commitment(commitment, &raw_commitment);
 
         LOG_HEXDUMP_DBG(raw_commitment, 64, "Raw COM to be written");
 
@@ -157,8 +157,7 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         int ret;
 
-        mbedtls_ecp_point proof_commitment;
-	mbedtls_ecp_point_init(&proof_commitment);
+        TEE_ECPoint *proof_commitment = TEE_ECPointAlloc();
 
         uint8_t raw_proof_commitment[64];
         uint8_t combined_raw_proof_nonce[64+params[2].b];
@@ -211,8 +210,8 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         LOG_INF("Calculating P");
 
-        ret = get_commited_value(random_val_0, random_val_1, &proof_commitment);
-        log_ecp_point("P = (r*g)+(u*h)", &proof_commitment);
+        ret = get_commited_value(random_val_0, random_val_1, proof_commitment);
+        log_ecp_point("P = (r*g)+(u*h)", proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = extract_raw_commitment(&proof_commitment, &raw_proof_commitment);
         if (ret != 0) return TEE_ERROR_GENERIC;
@@ -230,9 +229,6 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         log_bigint_hex("α = H(P,n)", alpha);
 
-        TEE_BigIntFree(response_0);
-        TEE_BigIntFree(response_1);
-
         LOG_INF("Calculating v, w");
 
         ret = get_response_to_challenge(&challenge_0, response_0);
@@ -241,7 +237,6 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
         if (ret != 0) return TEE_ERROR_GENERIC;
         ret = TEE_BigIntMul(mult_0, alpha, response_0);
         ret = TEE_BigIntMul(mult_1, alpha, response_1);
-
 
         /* Those are secrets that shouldn't be logged outside
          * of development purposes and should be immediately
