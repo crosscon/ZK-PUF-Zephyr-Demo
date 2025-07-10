@@ -6,7 +6,7 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/kernel.h>
-#include "puf_handler.h"
+#include "puf_prover.h"
 
 #define PUF_TA_UUID_BYTES { \
     0x00, 0x11, 0x22, 0x33, \

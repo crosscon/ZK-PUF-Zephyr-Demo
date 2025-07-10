@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "crypto.h"
 #include "tee_core_compat.h"
+#include "puf_handler.h"
 
 #define CHALLENGE_SIZE 16
 

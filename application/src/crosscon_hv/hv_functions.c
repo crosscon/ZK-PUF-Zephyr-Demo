@@ -2,7 +2,6 @@
 LOG_MODULE_DECLARE(PUF_VM);
 
 #include "hv_functions.h"
-#include "puf_handler.h"
 #include "puf_prover.h"
 #include "crypto.h"
 #include "tee_core_compat.h"
