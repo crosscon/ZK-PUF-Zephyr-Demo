@@ -28,8 +28,11 @@ static const uint8_t PUF_TA_UUID[TEE_UUID_LEN] = PUF_TA_UUID_BYTES;
 static const uint8_t CLIENT_UUID[TEE_UUID_LEN] = CLIENT_UUID_BYTES;
 
 // Helper functions to make the calling function logic easier to read
-int call_puf_ta_init(const struct device *tee_dev, int session_id)
+int call_puf_ta_init(const struct device *tee_dev, int session_id, uint8_t *shm_ptr,
+                     uint8_t g_x[32], uint8_t g_y[32], uint8_t h_x[32], uint8_t h_y[32])
 {
+    int ret;
+
     param[0].attr = TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT;
     param[0].a    = (uint64_t)(VMS_MEMREF0_OFFSET); // offsets
     param[0].b    = (uint64_t)32;                   // length: 32 bytes
@@ -56,11 +59,21 @@ int call_puf_ta_init(const struct device *tee_dev, int session_id)
     invoke_func_arg.ret       = 0;
     invoke_func_arg.ret_origin= 0;
 
-    return tee_invoke_func(tee_dev, &invoke_func_arg, 4, &param);
+    ret = tee_invoke_func(tee_dev, &invoke_func_arg, 4, &param);
+    if (ret == 0){
+        memcpy(g_x, (void *)(shm_ptr + param[0].a), param[0].b);
+        memcpy(g_y, (void *)(shm_ptr + param[1].a), param[1].b);
+        memcpy(h_x, (void *)(shm_ptr + param[2].a), param[2].b);
+        memcpy(h_y, (void *)(shm_ptr + param[3].a), param[3].b);
+    }
+    return ret;
 }
 
-int call_puf_ta_get_commitment(const struct device *tee_dev, int session_id, uint8_t *shm_ptr)
+int call_puf_ta_get_commitment(const struct device *tee_dev, int session_id, uint8_t *shm_ptr,
+                               uint8_t COM_x[32], uint8_t COM_y[32])
 {
+    int ret;
+
     const uint8_t challenge1[32] = {
         0xD1, 0x33, 0x53, 0xE8, 0x6B, 0x41, 0xF9, 0x4C,
         0x88, 0x77, 0xF6, 0x8F, 0xB9, 0x5A, 0xAD, 0x0A,
@@ -105,12 +118,20 @@ int call_puf_ta_get_commitment(const struct device *tee_dev, int session_id, uin
     memcpy((void *)(shm_ptr + param[0].a), challenge1, param[0].b);
     memcpy((void *)(shm_ptr + param[1].a), challenge2, param[1].b);
 
-    return tee_invoke_func(tee_dev, &invoke_func_arg, 4, &param);
+    ret = tee_invoke_func(tee_dev, &invoke_func_arg, 4, &param);
+    if (ret == 0){
+        memcpy(COM_x, (void *)(shm_ptr + param[2].a), param[2].b);
+        memcpy(COM_y, (void *)(shm_ptr + param[3].a), param[3].b);
+    }
+    return ret;
 }
 
 
-int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint8_t *shm_ptr)
+int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint8_t *shm_ptr,
+                              uint8_t P_x[32], uint8_t P_y[32], uint8_t v[64], uint8_t w[64])
 {
+    int ret;
+
     const uint8_t challenge1[32] = {
         0xD1, 0x33, 0x53, 0xE8, 0x6B, 0x41, 0xF9, 0x4C,
         0x88, 0x77, 0xF6, 0x8F, 0xB9, 0x5A, 0xAD, 0x0A,
@@ -167,12 +188,34 @@ int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint
     memcpy((void *)(shm_ptr + param[1].a), challenge2, param[1].b);
     memcpy((void *)(shm_ptr + param[2].a), nonce, param[2].b);
 
-    return tee_invoke_func(tee_dev, &invoke_func_arg, 4, &param);
+    ret = tee_invoke_func(tee_dev, &invoke_func_arg, 4, &param);
+    if (ret == 0){
+        memcpy(P_x, (void *)(shm_ptr + param[0].a), param[0].b);
+        memcpy(P_y, (void *)(shm_ptr + param[1].a), param[1].b);
+        memcpy(v,   (void *)(shm_ptr + param[2].a), param[2].b);
+        memcpy(w,   (void *)(shm_ptr + param[3].a), param[3].b);
+    }
+    return ret;
 }
 
 int main(void)
 {
     LOG_INF("Initializing TEE");
+
+    /* Places for output values */
+    uint8_t g_x[32];
+    uint8_t g_y[32];
+    uint8_t h_x[32];
+    uint8_t h_y[32];
+
+    uint8_t COM_x[32];
+    uint8_t COM_y[32];
+
+    uint8_t P_x[32];
+    uint8_t P_y[32];
+
+    uint8_t v[64];
+    uint8_t w[64];
 
     /* Init CROSSCON HV TEE */
     const struct device *tee_dev = device_get_binding("crosscon_hv_tee");
@@ -221,27 +264,40 @@ int main(void)
 
     LOG_INF("Calling PUF_TA_init");
 
-    res = call_puf_ta_init(tee_dev, session_id);
+    res = call_puf_ta_init(tee_dev, session_id, shm_ptr, g_x, g_y, h_x, h_y);
     if (res != 0) {
         LOG_ERR("calling PUF_TA_init failed: res=%d, TEE_ret=0x%08x", res, session_arg.ret);
         return -1;
     }
 
+    LOG_HEXDUMP_INF(g_x, sizeof(g_x), "g_x: ");
+    LOG_HEXDUMP_INF(g_y, sizeof(g_y), "g_y: ");
+    LOG_HEXDUMP_INF(h_x, sizeof(h_x), "h_x: ");
+    LOG_HEXDUMP_INF(h_y, sizeof(h_y), "h_y: ");
+
     LOG_INF("Calling PUF_TA_get_commitment");
 
-    res = call_puf_ta_get_commitment(tee_dev, session_id, shm_ptr);
+    res = call_puf_ta_get_commitment(tee_dev, session_id, shm_ptr, COM_x, COM_y);
     if (res != 0) {
         LOG_ERR("calling PUF_TA_get_commitment failed: res=%d, TEE_ret=0x%08x", res, session_arg.ret);
         return -1;
     }
 
+    LOG_HEXDUMP_INF(COM_x, sizeof(COM_x), "COM_x: ");
+    LOG_HEXDUMP_INF(COM_y, sizeof(COM_y), "COM_y: ");
+
     LOG_INF("Calling PUF_TA_get_ZK_proofs");
 
-    res = call_puf_ta_get_zk_proofs(tee_dev, session_id, shm_ptr);
+    res = call_puf_ta_get_zk_proofs(tee_dev, session_id, shm_ptr, P_x, P_y, v, w);
     if (res != 0) {
         LOG_ERR("calling PUF_TA_get_ZK_proofs failed: res=%d, TEE_ret=0x%08x", res, session_arg.ret);
         return -1;
     }
+
+    LOG_HEXDUMP_INF(P_x, sizeof(P_x), "P_x: ");
+    LOG_HEXDUMP_INF(P_y, sizeof(P_y), "P_y: ");
+    LOG_HEXDUMP_INF(v,   sizeof(v),   "v: ");
+    LOG_HEXDUMP_INF(w,   sizeof(w),   "w: ");
 
     res = tee_close_session(tee_dev, session_id);
     if (res != 0) {
