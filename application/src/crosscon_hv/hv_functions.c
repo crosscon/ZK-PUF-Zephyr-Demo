@@ -195,9 +195,9 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         LOG_INF("Getting random values r and u");
 
-        ret = get_random_bigint(random_val_0);
+        ret = TEE_BigIntGenerateRandom(random_val_0, 32, NULL, NULL);
         if (ret != 0) return TEE_ERROR_GENERIC;
-        ret = get_random_bigint(random_val_1);
+        ret = TEE_BigIntGenerateRandom(random_val_1, 32, NULL, NULL);
         if (ret != 0) return TEE_ERROR_GENERIC;
 
         /* Those are secrets that shouldn't be logged outside

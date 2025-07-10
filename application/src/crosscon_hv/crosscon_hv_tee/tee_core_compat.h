@@ -52,4 +52,7 @@ TEE_Result TEE_DigestDoFinal(TEE_DigestOperation *op,
                              const void *data, size_t len,
                              uint8_t *digest, size_t *digest_len);
 
+/* TEE_GenerateRandom */
+void TEE_GenerateRandom(void *buffer, size_t length);
+
 #endif // TEE_CORE_COMPAT_H

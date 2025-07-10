@@ -55,10 +55,13 @@ TEE_Result TEE_BigIntMod(TEE_BigInt *R, const TEE_BigInt *A, const TEE_BigInt *N
     return mbedtls_mpi_mod_mpi(&R->mpi, &A->mpi, &N->mpi);
 }
 
+static int _internal_tee_rng_adapter(void *ctx, unsigned char *output, size_t output_len); // Forward declaration
+
 TEE_Result TEE_BigIntGenerateRandom(TEE_BigInt *X, size_t num_bytes,
                                     int (*f_rng)(void *, unsigned char *, size_t),
                                     void *p_rng) {
-    return mbedtls_mpi_fill_random(&X->mpi, num_bytes, f_rng, p_rng);
+    // Ignore external f_rng; use the internal one
+    return mbedtls_mpi_fill_random(&X->mpi, num_bytes, _internal_tee_rng_adapter, NULL);
 }
 
 size_t TEE_BigIntSizeInBytes(const TEE_BigInt *X) {
@@ -181,6 +184,14 @@ TEE_Result TEE_DigestDoFinal(TEE_DigestOperation *op,
 }
 
 // ----------------------------------------
+// TEE_GenerateRandom
+// ----------------------------------------
+
+void TEE_GenerateRandom(void *buffer, size_t length) {
+    sys_csrand_get(buffer, length);
+}
+
+// ----------------------------------------
 // Crypto functions
 // ----------------------------------------
 
@@ -238,26 +249,10 @@ void log_ecp_point(const char *label, const TEE_ECPoint *P)
     LOG_HEXDUMP_DBG(buf, len, label);
 }
 
-int rand_function(void *rng_state, unsigned char *output, size_t len) {
-    (void)rng_state;
-    sys_csrand_get(output, len);
+int _internal_tee_rng_adapter(void *ctx, unsigned char *output, size_t output_len) {
+    (void)ctx;
+    TEE_GenerateRandom(output, output_len);
     return 0;
-}
-
-int get_random_bigint(TEE_BigInt *X)
-{
-    int ret;
-    size_t n_bytes = mbedtls_mpi_size(&grp->grp.N);
-
-    mbedtls_mpi_init(X);
-
-    if ((ret = mbedtls_mpi_fill_random(X,
-                                       n_bytes,
-                                       rand_function,
-                                       NULL)) != 0)
-        return ret;
-
-    return mbedtls_mpi_mod_mpi(X, X, &grp->grp.N);
 }
 
 // uses Hash-to-Curve Point Generation for ensuring independence of g and h
