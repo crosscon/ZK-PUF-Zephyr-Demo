@@ -3,19 +3,21 @@
 hex_to_decimal.py: Convert mbedtls hex dumps for MPI and EC points to decimal values.
 
 Usage:
-  python hex_to_decimal.py [options] <input_file>
+  # MPI:
+  python hex_to_array.py -M <input_file>
+
+  # EC Point
+  python hex_to_decimal.py -E <input_file>
 
 Modes:
   -M, --mpi      Treat input as an MPI hex dump and print its decimal value.
   -E, --ecp      Treat input as an uncompressed EC point (0x04||X||Y) and print X and Y in decimal.
 
 Input format:
-  Lines containing two-digit hex bytes, optionally with C-style formatting.
-  Anything after `|` on a line is ignored.
-
-Examples:
-  python hex_to_decimal.py -M dump.txt
-  python hex_to_decimal.py -E point_dump.txt
+  Lines containing two-digit hex bytes, e.g.
+     0c 40 f5 ff 9d 5a be fc  c6 9f 84 0d f2 46 84 96 |.@...Z.. .....F..
+     cf 8c 47 eb 30 6d 4d 20  2f f5 d3 7c 71 99 3e 13 |..G.0mM  /..|q.>.
+  Anything after ‘|’ is ignored.
 """
 import sys
 import re
