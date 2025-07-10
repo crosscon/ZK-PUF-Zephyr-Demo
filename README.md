@@ -55,6 +55,8 @@ For more info on how to proof/authenticate take a look at [scripts/proofs/README
 
 ## API
 
+### GP Client
+
 The app uses a subset of Global Platform Client API for communication.
 
 An example of client-side communication can be seen at [GUEST_VM0](https://github.com/crosscon/ZK-PUF-Zephyr-Demo/tree/GUEST_VM0)
@@ -62,11 +64,33 @@ branch.
 
 **TA UUID** - `0x00112233445566778899AABBCCDDEEFF`
 
-| handler                 | Function ID   | Parameter 1 (`atrr`/`b`)                                      | Parameter 2 (`atrr`/`b`)                                      | Parameter 3 (`atrr`/`b`)                                            | Parameter 4 (`atrr`/`b`)                                          |
+| Handler                 | Function ID   | Parameter 1 (`atrr`/`b`)                                      | Parameter 2 (`atrr`/`b`)                                      | Parameter 3 (`atrr`/`b`)                                            | Parameter 4 (`atrr`/`b`)                                          |
 |-------------------------|---------------|---------------------------------------------------------------|---------------------------------------------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------|
 | `PUF_TA_init`           | `0x00112233`  | $g_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)        | $g_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)        | $h_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)              | $h_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)            |
 | `PUF_TA_get_commitment` | `0x11223344`  | $C_1$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INPUT` / 32 bytes)         | $C_2$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INPUT` / 32 bytes)         | $\textit{COM}_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes)   | $\textit{COM}_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 32 bytes) |
 | `PUF_TA_get_ZK_proofs`  | `0x22334455`  | $C_1$ / $P_x$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INOUT` / 32 bytes) | $C_2$ / $P_y$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INOUT` / 32 bytes) | $n$ / $v$ (`TEE_PARAM_ATTR_TYPE_MEMREF_INOUT` / 64 bytes)           | $w$ (`TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT` / 64 bytes)              |
+
+### GP Core
+
+This app implements a subset of Global Platform Core API for potential modularity portability of the authentication scheme.
+This is aligned with the TRL 3/4 research nature of the project and is not intended as full GP compliance.
+
+| **Category**       | **GP Feature/API**                                   | **Status**               |
+| -------------------|------------------------------------------------------|--------------------------|
+| BigInt Arithmetic  | `TEE_BigInt*` ops (Alloc, Add, Mul, Mod, Convert)    | Implemented              |
+|                    | `TEE_BigIntSub`, `ExpMod`, etc.                      | Not Implemented          |
+| Digest / Hashing   | `TEE_Digest*` (SHA-256)                              | Implemented              |
+|                    | Other hash functions (SHA-1, MD5, SM3)               | Not Implemented          |
+| Symmetric Crypto   | AES, 3DES, SM4, Cipher API                           | Not Implemented          |
+| MAC / HMAC         | HMAC, CMAC APIs                                      | Not Implemented          |
+| Asymmetric Crypto  | RSA, DSA, DH                                         | Not Implemented          |
+|                    | EC arithmetic (`TEE_ECPoint`, `TEE_ECCurve`)         | Custom Helper Types Only |
+| Key Management     | `TEE_AllocateTransientObject`, `TEE_SetOperationKey` | Not Implemented          |
+| Randomness         | `TEE_GenerateRandom`                                 | Implemented              |
+| Time Functions     | `TEE_GetSystemTime`, `TEE_Wait`                      | Not Implemented          |
+| Session Management | `TA_OpenSessionEntryPoint`, etc.                     | Partial                  |
+| Error Codes        | `TEE_Result`, `TEE_ORIGIN_*`, `TEE_ERROR_*`          | Implemented              |
+| Object APIs        | Persistent objects, secure storage                   | Not Implemented          |
 
 ## Additional Information
 
