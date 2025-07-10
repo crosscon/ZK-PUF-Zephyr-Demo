@@ -26,11 +26,11 @@ int init_puf(void)
 {
     status_t status;
 
-    status = inner_puf_init();
+    status = _internal_puf_init();
     if (status != 0) return status;
     LOG_HEXDUMP_DBG(activation_code, PUF_ACTIVATION_CODE_SIZE, "Activation Code");
 
-    status = inner_puf_start(activation_code);
+    status = _internal_puf_start(activation_code);
     if (status != 0) return status;
 
     LOG_HEXDUMP_DBG(key_code, PUF_KEY_CODE_SIZE, "Intrinsic key code");
@@ -50,7 +50,7 @@ static void secure_memzero(void *v, size_t n)
     }
 }
 
-int inner_puf_init(void)
+int _internal_puf_init(void)
 {
     status_t status;
 
@@ -64,7 +64,7 @@ int inner_puf_init(void)
     return 0;
 }
 
-int inner_puf_start(uint8_t *activation_code)
+int _internal_puf_start(uint8_t *activation_code)
 {
     status_t status;
     /* Start the PUF with the activation code */

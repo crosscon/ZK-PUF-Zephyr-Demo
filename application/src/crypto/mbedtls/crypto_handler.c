@@ -198,7 +198,7 @@ int init_crypto()
     g = TEE_ECPointAlloc();
     grp = TEE_ECCurveAlloc();
 
-    ret = inner_init_ECC(grp, h, g);
+    ret = _internal_init_ECC(grp, h, g);
     if (ret != 0) return ret;
 
     return TEE_SUCCESS;
@@ -261,7 +261,7 @@ int get_random_bigint(TEE_BigInt *X)
 }
 
 // uses Hash-to-Curve Point Generation for ensuring independence of g and h
-int inner_init_ECC(TEE_ECCurve *curve, TEE_ECPoint *h, TEE_ECPoint *g)
+int _internal_init_ECC(TEE_ECCurve *curve, TEE_ECPoint *h, TEE_ECPoint *g)
 {
     int ret = 0;
     const char *label = "secp256r1-h-generator";
