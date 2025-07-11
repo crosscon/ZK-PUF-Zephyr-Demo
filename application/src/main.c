@@ -4,6 +4,7 @@ LOG_MODULE_REGISTER(GUEST_VM);
 #include <stdio.h>
 #include "crosscon_hv_config.h"
 #include <zephyr/kernel.h>
+#include <mbedtls/bignum.h>
 
 #define CLIENT_UUID_BYTES { \
     0x10, 0x20, 0x30, 0x40, \
@@ -157,6 +158,8 @@ int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
     };
 
+    LOG_HEXDUMP_INF(nonce, sizeof(nonce), "used nonce (hex): ");
+
     param[0].attr = TEE_PARAM_ATTR_TYPE_MEMREF_INOUT;
     param[0].a    = (uint64_t)(VMS_MEMREF0_OFFSET);
     param[0].b    = (uint64_t)32;
@@ -196,6 +199,52 @@ int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint
         memcpy(w,   (void *)(shm_ptr + param[3].a), param[3].b);
     }
     return ret;
+}
+
+void hex_to_decimal(uint8_t *array, size_t len, const char *label)
+{
+    int ret;
+    mbedtls_mpi mpi;
+    mbedtls_mpi_init(&mpi);
+
+    // Convert raw bytes into an MPI
+    ret = mbedtls_mpi_read_binary(&mpi, array, len);
+    if (ret != 0) {
+        LOG_ERR("Failed to read binary into MPI: -0x%04X", -ret);
+        mbedtls_mpi_free(&mpi);
+        return;
+    }
+
+    // Determine how much space is needed
+    size_t required_len = 0;
+    ret = mbedtls_mpi_write_string(&mpi, 10, NULL, 0, &required_len);
+    if (ret != MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL) {
+        LOG_ERR("Failed to calculate string length: -0x%04X", -ret);
+        mbedtls_mpi_free(&mpi);
+        return;
+    }
+
+    // Allocate the buffer
+    char *decimal_str = malloc(required_len);
+    if (!decimal_str) {
+        LOG_ERR("Failed to allocate memory for decimal string");
+        mbedtls_mpi_free(&mpi);
+        return;
+    }
+
+    // Write the string for real
+    ret = mbedtls_mpi_write_string(&mpi, 10, decimal_str, required_len, &required_len);
+    if (ret != 0) {
+        LOG_ERR("Failed to convert MPI to string: -0x%04X", -ret);
+        free(decimal_str);
+        mbedtls_mpi_free(&mpi);
+        return;
+    }
+
+    LOG_INF("%s%s", label, decimal_str);
+
+    free(decimal_str);
+    mbedtls_mpi_free(&mpi);
 }
 
 int main(void)
@@ -270,10 +319,15 @@ int main(void)
         return -1;
     }
 
-    LOG_HEXDUMP_INF(g_x, sizeof(g_x), "g_x: ");
-    LOG_HEXDUMP_INF(g_y, sizeof(g_y), "g_y: ");
-    LOG_HEXDUMP_INF(h_x, sizeof(h_x), "h_x: ");
-    LOG_HEXDUMP_INF(h_y, sizeof(h_y), "h_y: ");
+    LOG_HEXDUMP_DBG(g_x, sizeof(g_x), "g_x (hex): ");
+    LOG_HEXDUMP_DBG(g_y, sizeof(g_y), "g_y (hex): ");
+    LOG_HEXDUMP_DBG(h_x, sizeof(h_x), "h_x (hex): ");
+    LOG_HEXDUMP_DBG(h_y, sizeof(h_y), "h_y (hex): ");
+
+    hex_to_decimal(g_x, sizeof(g_x), "g_x (decimal): ");
+    hex_to_decimal(g_y, sizeof(g_y), "g_y (decimal): ");
+    hex_to_decimal(h_x, sizeof(h_x), "h_x (decimal): ");
+    hex_to_decimal(h_y, sizeof(h_y), "h_y (decimal): ");
 
     LOG_INF("Calling PUF_TA_get_commitment");
 
@@ -283,8 +337,11 @@ int main(void)
         return -1;
     }
 
-    LOG_HEXDUMP_INF(COM_x, sizeof(COM_x), "COM_x: ");
-    LOG_HEXDUMP_INF(COM_y, sizeof(COM_y), "COM_y: ");
+    LOG_HEXDUMP_DBG(COM_x, sizeof(COM_x), "COM_x (hex): ");
+    LOG_HEXDUMP_DBG(COM_y, sizeof(COM_y), "COM_y (hex): ");
+
+    hex_to_decimal(COM_x, sizeof(COM_x), "COM_x (decimal): ");
+    hex_to_decimal(COM_y, sizeof(COM_y), "COM_y (decimal): ");
 
     LOG_INF("Calling PUF_TA_get_ZK_proofs");
 
@@ -294,10 +351,15 @@ int main(void)
         return -1;
     }
 
-    LOG_HEXDUMP_INF(P_x, sizeof(P_x), "P_x: ");
-    LOG_HEXDUMP_INF(P_y, sizeof(P_y), "P_y: ");
-    LOG_HEXDUMP_INF(v,   sizeof(v),   "v: ");
-    LOG_HEXDUMP_INF(w,   sizeof(w),   "w: ");
+    LOG_HEXDUMP_DBG(P_x, sizeof(P_x), "P_x (hex): ");
+    LOG_HEXDUMP_DBG(P_y, sizeof(P_y), "P_y (hex): ");
+    LOG_HEXDUMP_DBG(v,   sizeof(v),   "v (hex): ");
+    LOG_HEXDUMP_DBG(w,   sizeof(w),   "w (hex): ");
+
+    hex_to_decimal(P_x, sizeof(P_x), "P_x (decimal): ");
+    hex_to_decimal(P_y, sizeof(P_y), "P_y (decimal): ");
+    hex_to_decimal(v, sizeof(v), "v (decimal): ");
+    hex_to_decimal(w, sizeof(w), "w (decimal): ");
 
     res = tee_close_session(tee_dev, session_id);
     if (res != 0) {
