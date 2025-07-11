@@ -109,6 +109,10 @@ needs to be prepended. The final structure thus should look like `0x04||X||Y`.
 
 ![](./doc/gif/proof_demo.gif)
 
+### Debug output
+
+![](./doc/gif/running_debug_demo.gif)
+
 ## License
 
 See LICENSE file.
