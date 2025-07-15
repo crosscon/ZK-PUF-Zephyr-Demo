@@ -4,6 +4,11 @@ LOG_MODULE_DECLARE(PUF_VM);
 #include <stdalign.h>
 #include <stdio.h>
 #include "puf_handler.h"
+#include "fsl_puf.h"
+#include "puf_prover.h"
+
+#define PUF_KEY_SIZE PUF_RESPONSE_SIZE
+#define PUF_KEY_CODE_SIZE PUF_GET_KEY_CODE_SIZE_FOR_KEY_SIZE(PUF_KEY_SIZE)
 
 puf_config_t pufConfig;
 

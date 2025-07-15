@@ -1,17 +1,6 @@
 #ifndef PUF_HANDLER_H
 #define PUF_HANDLER_H
 
-#include "fsl_puf.h"
-#include "puf_prover.h"
-
-#ifndef PUF_KEY_SIZE
-#define PUF_KEY_SIZE 32         /* Multiples of 8, larger than kPUF_KeySizeM (8), less than kPUF_KeySizeMax (512) */
-#endif
-
-#ifndef PUF_KEY_CODE_SIZE
-#define PUF_KEY_CODE_SIZE PUF_GET_KEY_CODE_SIZE_FOR_KEY_SIZE(PUF_KEY_SIZE)
-#endif
-
 /**
  * @brief Initializes the Physically Unclonable Function (PUF) module.
  *

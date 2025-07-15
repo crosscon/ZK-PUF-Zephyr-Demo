@@ -7,8 +7,8 @@ int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
 {
     TEE_DigestOperation *digest = TEE_AllocateDigestOperation();
     int ret;
-    uint8_t puf_key[PUF_KEY_SIZE];
-    uint8_t combined[RESPONSE_SIZE];
+    uint8_t puf_key[PUF_RESPONSE_SIZE];
+    uint8_t combined[RESPONSE_PRE_HASH_SIZE];
     uint8_t hash[32];
     size_t hash_len = sizeof(hash);
 
@@ -19,8 +19,8 @@ int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
     }
 
     // Combine keyCode and challenge
-    memcpy(combined, puf_key, PUF_KEY_SIZE);
-    memcpy(combined + PUF_KEY_SIZE, challenge, CHALLENGE_SIZE);
+    memcpy(combined, puf_key, PUF_RESPONSE_SIZE);
+    memcpy(combined + PUF_RESPONSE_SIZE, challenge, CHALLENGE_SIZE);
 
     ret = puf_flush_key(&puf_key);
     if(ret!=0){
@@ -29,7 +29,7 @@ int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
     }
 
     // Hash the combined data into temporary buffer
-    ret = TEE_DigestUpdate(digest, combined, RESPONSE_SIZE);
+    ret = TEE_DigestUpdate(digest, combined, RESPONSE_PRE_HASH_SIZE);
     if (ret != 0) return ret;
     ret = TEE_DigestDoFinal(digest, NULL, 0, hash, &hash_len);
     if (ret != 0) return ret;
