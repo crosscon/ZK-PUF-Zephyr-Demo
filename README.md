@@ -17,7 +17,11 @@ Internally produces responses $R_1$ and $R_2$ in response to challenges $C_1$ an
 $C_2$ using the device's [PUF](https://en.wikipedia.org/wiki/Physical_unclonable_function).
 Commits $R_1$ and $R_2$ using Pedersen commitment into $\textit{COM}$ and returns it.
 
-$R_n = \textit{SHA256}(\textit{PUF Response}, C_n)$
+$R_n = \textit{SHA256}(\textit{SHA256}(\textit{PUF Response}, \textit{Trusted Application UUID}), C_n)$
+
+> Additional hashing with TA UUID serves as a PoC of identity scoping that could happen in
+a true multi-tenant TEE. This mitigates the risk of some TA compromising platform via misuse
+or exfiltration of the physically unique secret.
 
 $\textit{COM} = g^{R_1} \cdot h^{R_2}$
 

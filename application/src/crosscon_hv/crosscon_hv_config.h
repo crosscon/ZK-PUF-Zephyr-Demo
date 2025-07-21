@@ -125,6 +125,8 @@ extern volatile struct tee_invoke_func_arg arg;
 extern volatile struct tee_open_session_arg session_arg;
 extern volatile GP_SharedMessage *msg;
 
+extern const uint8_t PUF_TA_UUID[TEE_UUID_LEN];
+
 // ----------------------------------------
 // Hypervisor Specific Functions
 // ----------------------------------------

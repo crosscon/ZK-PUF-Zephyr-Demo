@@ -5,14 +5,14 @@
 #include "crypto.h"
 #include "tee_core_compat.h"
 #include "puf_handler.h"
-
+#include "crosscon_hv_config.h" //Needed for UUID hashing - identity scoping
 #define CHALLENGE_SIZE 32
 
 #ifndef PUF_RESPONSE_SIZE
 #define PUF_RESPONSE_SIZE 128
 #endif
 
-#define RESPONSE_PRE_HASH_SIZE CHALLENGE_SIZE+PUF_RESPONSE_SIZE
+#define RESPONSE_PRE_HASH_SIZE (PUF_RESPONSE_SIZE + CHALLENGE_SIZE + TEE_UUID_LEN)
 
 int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response);
 int get_commited_value(TEE_BigInt *response_0, TEE_BigInt *response_1, TEE_ECPoint *commitment);

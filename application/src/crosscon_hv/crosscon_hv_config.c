@@ -15,7 +15,7 @@ LOG_MODULE_DECLARE(PUF_VM);
     0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF \
 }
 
-static const uint8_t PUF_TA_UUID[TEE_UUID_LEN] = PUF_TA_UUID_BYTES;
+const uint8_t PUF_TA_UUID[TEE_UUID_LEN] = PUF_TA_UUID_BYTES;
 
 #define MAX_CALLS_PER_WINDOW 5
 #define TIME_WINDOW_MS (30 * 1000)  // 30 seconds
