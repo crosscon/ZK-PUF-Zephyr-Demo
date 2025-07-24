@@ -12,32 +12,15 @@ int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
 {
     TEE_DigestOperation *digest = TEE_AllocateDigestOperation();
     int ret;
-    uint8_t puf_key[PUF_RESPONSE_SIZE];
-    uint8_t interm_digest[32];  // Output of stage 1
+    uint8_t puf_digested_key[32];
     uint8_t final_digest[32];   // Final result
     size_t digest_len = 32;
 
     if (!digest) return TEE_ERROR_OUT_OF_MEMORY;
 
-    ret = puf_get_key(&puf_key);
+    ret = puf_get_key(PUF_TA_UUID, TEE_UUID_LEN, &puf_digested_key);
     if (ret != 0) {
         LOG_ERR("Error: Can't Get Response From PUF");
-        TEE_FreeDigestOperation(digest);
-        return ret;
-    }
-
-    // H(UUID || PUF_response)
-    TEE_DigestUpdate(digest, PUF_TA_UUID, TEE_UUID_LEN);
-    TEE_DigestUpdate(digest, puf_key, PUF_RESPONSE_SIZE);
-    ret = TEE_DigestDoFinal(digest, NULL, 0, interm_digest, &digest_len);
-    if (ret != 0) {
-        TEE_FreeDigestOperation(digest);
-        return ret;
-    }
-
-    ret = puf_flush_key(&puf_key);
-    if (ret != 0) {
-        LOG_ERR("Error: Can't Flush PUF from memory");
         TEE_FreeDigestOperation(digest);
         return ret;
     }
@@ -46,7 +29,7 @@ int get_response_to_challenge(uint8_t *challenge, TEE_BigInt *response)
     digest = TEE_AllocateDigestOperation();  // fresh context
     if (!digest) return TEE_ERROR_OUT_OF_MEMORY;
 
-    TEE_DigestUpdate(digest, interm_digest, sizeof(interm_digest));
+    TEE_DigestUpdate(digest, puf_digested_key, sizeof(puf_digested_key));
     TEE_DigestUpdate(digest, challenge, CHALLENGE_SIZE);
     ret = TEE_DigestDoFinal(digest, NULL, 0, final_digest, &digest_len);
     TEE_FreeDigestOperation(digest);
