@@ -1,17 +1,35 @@
 # Zero-Knowledge PUF CROSSCON HV Demo
 
-App can be used standalone via `lpcxpresso55s69/lpc55s69/cpu0` target but is
-aimed to be used within
-[crosscon/UC1.1-Manifest](https://github.com/crosscon/UC1.1-Manifest#)
+This repository contains a proof-of-concept Trusted Application for
+authentication using a Physical Unclonable Function (PUF) combined with
+zero-knowledge proofs.
 
-# Available functions
+The application's trust model is backed by the
+[CROSSCON Hypervisor](https://github.com/crosscon/CROSSCON-Hypervisor), which
+provides isolation and integrity. A subset of the GlobalPlatform Core and Client
+APIs has been implemented to enable structured communication and improve
+portability.
 
-## `PUF_TA_init`
+> Note: This app uses Zephyr RTOS and **not** a full-featured TEE like
+OP-TEE/MTower. At the time of starting this project no TEE was available for the
+platform.
+
+## Building/Usage
+
+The application can be used as a standalone demo via the
+`lpcxpresso55s69/lpc55s69/cpu0` target when building with
+[west](https://docs.zephyrproject.org/latest/develop/west/index.html).
+However, it is primarily intended to be run as part of
+[crosscon/UC1.1-Manifest](https://github.com/crosscon/UC1.1-Manifest#).
+
+## Available functions
+
+### `PUF_TA_init`
 
 Has to be called before other functions. Initializes PUF hardware and neccessary
 ECC variables as well as returns $g$ and $h$.
 
-## `PUF_TA_get_commitment`
+### `PUF_TA_get_commitment`
 
 Internally produces responses $R_1$ and $R_2$ in response to challenges $C_1$ and
 $C_2$ using the device's [PUF](https://en.wikipedia.org/wiki/Physical_unclonable_function).
@@ -32,7 +50,7 @@ Multiple $\textit{COM}$ can be created using different pairs of $C_1$ / $C_2$.
 
 It's crucial that $C_1 \neq C_2$.
 
-## `PUF_TA_get_ZK_proofs`
+### `PUF_TA_get_ZK_proofs`
 
 Once the device is enrolled, it can use this function to authenticate itself to other
 devices. The process is initiated by the verifier, which sends
