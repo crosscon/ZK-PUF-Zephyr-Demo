@@ -64,7 +64,7 @@ $P=g^r \cdot h^u$.
 This is used to create a hash $\alpha = \textit{SHA256}(P, n)$.
 
 Two zero-knowledge proofs are calculated, denoted as $v$ and $w$, where
-$v = r + \alpha R_1$ and $w = u + \alpha R_1$ . These proofs enable to demonstrate
+$v = r + \alpha R_1$ and $w = u + \alpha R_2$ . These proofs enable to demonstrate
 knowledge of $R_1$ and $R_2$ to the verifier, without disclosing the actual values of
 $R_1$ and $R_2$.
 
