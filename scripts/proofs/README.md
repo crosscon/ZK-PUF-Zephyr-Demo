@@ -14,6 +14,9 @@ Scripts can be run with:
 ```sh
 sage <script>
 ```
+Additionally a [`proof_verifier_calc_tinyec.py`](./proof_verifier_calc_tinyec.py) Python script is
+provided based on the `proof_verifier_calc.sage`.
+
 ## Verification
 
 The full verification follows the equation:
@@ -30,7 +33,7 @@ nonce $n$. The $\alpha$ can be reconstructed by the prover from $P$ and $n$.
 This mechanism ensures the uniqueness and security of each session, effectively
 preventing replay attacks.
 
-## `proof_verifier_calc`
+## `proof_verifier_calc.sage`
 
 This script follows the above equation and can be used to authenticate the device
 using the information sent over by a prover which are:
@@ -161,6 +164,13 @@ P * COM^α = (311824871654527956607003739142906767974115204662205905502962404496
 ✅ Proof verifies: g^v·h^w = P·COM^α
 Computation complete
 ```
+
+## `proof_verifier_calc_tinyec.py`
+
+Based on `proof_verifier_calc.sage`, this script provides the same functionality but uses the
+[`tinyec`](https://pypi.org/project/tinyec/) Python library for elliptic curve arithmetic instead of SageMath.
+
+This makes it easier to integrate into embedded build systems where SageMath's large dependency footprint is impractical.
 
 ## `proof_full_calc.sage`
 
