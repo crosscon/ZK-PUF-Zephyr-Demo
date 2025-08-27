@@ -36,6 +36,15 @@ const func_id_map_t function_table[FUNCTION_TABLE_SIZE] = {
                                                      TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT),
         .expected_param_lengths = {32, 32, 64, 64},
         .handler = PUF_TA_get_ZK_proofs
+    },
+    {
+        .func_id = PUF_TA_VERIFY_ZK_PROOFS_FUNC_ID,
+        .expected_param_types = CROSSCON_PARAM_TYPES(TEE_PARAM_ATTR_TYPE_MEMREF_INPUT,
+                                                     TEE_PARAM_ATTR_TYPE_NONE,
+                                                     TEE_PARAM_ATTR_TYPE_NONE,
+                                                     TEE_PARAM_ATTR_TYPE_NONE),
+        .expected_param_lengths = {448, 0, 0, 0},
+        .handler = PUF_TA_verify_ZK_proofs
     }
 };
 
@@ -280,4 +289,10 @@ TEE_Result PUF_TA_get_ZK_proofs(void)
 
         return TEE_SUCCESS;
     }
+}
+
+
+TEE_Result PUF_TA_verify_ZK_proofs(void)
+{
+    return TEE_SUCCESS;
 }
