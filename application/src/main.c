@@ -4,7 +4,7 @@ LOG_MODULE_REGISTER(PUF_VM, LOG_LEVEL_INF);
 #include "fsl_puf.h"
 #include <stdio.h>
 
-#define PUF_KEY_SIZE 32
+#define PUF_KEY_SIZE 128
 #define PUF_KEY_CODE_SIZE PUF_GET_KEY_CODE_SIZE_FOR_KEY_SIZE(PUF_KEY_SIZE)
 
 int main(void)
