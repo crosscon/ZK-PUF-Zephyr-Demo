@@ -56,10 +56,9 @@ TEE_Result PUF_TA_init(void)
         if (ret != 0) return TEE_ERROR_GENERIC;
 
         has_been_initialized = true;
-        result = TEE_SUCCESS;
-    } else {
-        result = TEE_ERROR_BAD_STATE;
     }
+
+    result = TEE_SUCCESS;
 
     log_ecp_point("g", g);
     log_ecp_point("h", h);
