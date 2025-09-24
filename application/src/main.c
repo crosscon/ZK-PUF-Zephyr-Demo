@@ -33,9 +33,73 @@ static const uint8_t CLIENT_UUID[TEE_UUID_LEN] = CLIENT_UUID_BYTES;
 static const struct device *tee_dev;
 static volatile uint8_t *shm_ptr;
 
+/* Parses a numeric string into a fixed-length big-endian byte buffer.
+ * - If `str` starts with "0x" or "0X" it is parsed as hex (base 16).
+ * - Otherwise it is parsed as decimal (base 10).
+ * - The resulting value is written as big-endian into `out` of length out_len.
+ * - If the value needs more than out_len bytes -> returns -EOVERFLOW.
+ * - Returns 0 on success or negative errno on error.
+ */
+static int parse_numeric_string_to_fixed(const char *str, uint8_t *out, size_t out_len)
+{
+    int ret;
+    mbedtls_mpi mpi;
+    const char *p = str;
+    int base = 10;
+
+    if (!str || !out || out_len == 0) {
+        return -EINVAL;
+    }
+
+    if ((str[0] == '0') && (str[1] == 'x' || str[1] == 'X')) {
+        base = 16;
+        p = str + 2; /* skip 0x prefix */
+        if (*p == '\0') {
+            return -EINVAL; /* only "0x" provided */
+        }
+    }
+
+    mbedtls_mpi_init(&mpi);
+
+    /* read string into mpi (handles arbitrary length decimal/hex) */
+    ret = mbedtls_mpi_read_string(&mpi, base, p);
+    if (ret != 0) {
+        mbedtls_mpi_free(&mpi);
+        return -EINVAL;
+    }
+
+    /* check required bytes */
+    size_t bits = mbedtls_mpi_bitlen(&mpi); /* 0 if value == 0 */
+    size_t needed_bytes = (bits + 7) / 8;
+    if (needed_bytes == 0) {
+        needed_bytes = 1; /* represent zero as one zero byte, but we'll still write full out_len */
+    }
+
+    if (needed_bytes > out_len) {
+        mbedtls_mpi_free(&mpi);
+        return -EOVERFLOW;
+    }
+
+    /* zero entire output buffer and write big-endian representation into it */
+    memset(out, 0, out_len);
+    ret = mbedtls_mpi_write_binary(&mpi, out, out_len); /* writes exactly out_len bytes, MSB first */
+    if (ret != 0) {
+        mbedtls_mpi_free(&mpi);
+        return -EIO;
+    }
+
+    mbedtls_mpi_free(&mpi);
+    return 0;
+}
+
 /* Shell commands */
 static int cmd_ta_init(const struct shell *shell, size_t argc, char **argv)
 {
+    if (argc != 1) {
+        shell_error(shell, "Wrong amount of parameters.\nUsage: ta_init");
+        return -EINVAL;
+    }
+
     uint8_t g_x[32], g_y[32], h_x[32], h_y[32];
     int res = call_puf_ta_init(tee_dev, session_id, (uint8_t *)shm_ptr, g_x, g_y, h_x, h_y);
     if (res) {
@@ -48,21 +112,48 @@ static int cmd_ta_init(const struct shell *shell, size_t argc, char **argv)
 
 static int cmd_ta_commit(const struct shell *shell, size_t argc, char **argv)
 {
-    const uint8_t challenge1[32] = {
-        0xD1, 0x33, 0x53, 0xE8, 0x6B, 0x41, 0xF9, 0x4C,
-        0x88, 0x77, 0xF6, 0x8F, 0xB9, 0x5A, 0xAD, 0x0A,
-        0x35, 0x82, 0x06, 0x95, 0xE2, 0x03, 0x74, 0x13,
-        0xBD, 0x57, 0xA9, 0xC4, 0x47, 0xDF, 0x11, 0xD9
-    };
+    if (argc != 3) {
+        shell_error(shell, "Usage: ta_commit <challenge1> <challenge2>");
+        shell_print(shell, "challenge may be decimal or hex prefixed with 0x (fits in 32 bytes)");
+        return -EINVAL;
+    }
 
-    const uint8_t challenge2[32] = {
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
-    };
+    uint8_t challenge1[32], challenge2[32], COM_x[32], COM_y[32];
+    int rc;
 
-    uint8_t COM_x[32], COM_y[32];
+    /* Debug: show raw input strings */
+    shell_print(shell, "Raw challenge1 string (len=%zu):", strlen(argv[1]));
+    shell_hexdump(shell, (const uint8_t *)argv[1], strlen(argv[1]));
+
+    shell_print(shell, "Raw challenge2 string (len=%zu):", strlen(argv[2]));
+    shell_hexdump(shell, (const uint8_t *)argv[2], strlen(argv[2]));
+
+    /* Parse either decimal or 0x-hex into 32-byte big-endian buffers */
+    rc = parse_numeric_string_to_fixed(argv[1], challenge1, sizeof(challenge1));
+    if (rc == -EOVERFLOW) {
+        shell_error(shell, "challenge1 too large to fit in 32 bytes");
+        return rc;
+    } else if (rc != 0) {
+        shell_error(shell, "Invalid challenge1 (not a decimal or 0x-hex number)");
+        return rc;
+    }
+
+    rc = parse_numeric_string_to_fixed(argv[2], challenge2, sizeof(challenge2));
+    if (rc == -EOVERFLOW) {
+        shell_error(shell, "challenge2 too large to fit in 32 bytes");
+        return rc;
+    } else if (rc != 0) {
+        shell_error(shell, "Invalid challenge2 (not a decimal or 0x-hex number)");
+        return rc;
+    }
+
+    /* Debug: show parsed fixed-size big-endian buffers */
+    shell_print(shell, "Parsed challenge1 (32 bytes, big-endian):");
+    shell_hexdump(shell, challenge1, sizeof(challenge1));
+
+    shell_print(shell, "Parsed challenge2 (32 bytes, big-endian):");
+    shell_hexdump(shell, challenge2, sizeof(challenge2));
+
     int res = call_puf_ta_get_commitment(tee_dev, session_id, (uint8_t *)shm_ptr,
                                          challenge1, challenge2, COM_x, COM_y);
     if (res) {
@@ -75,31 +166,64 @@ static int cmd_ta_commit(const struct shell *shell, size_t argc, char **argv)
 
 static int cmd_ta_zk(const struct shell *shell, size_t argc, char **argv)
 {
-    const uint8_t challenge1[32] = {
-        0xD1, 0x33, 0x53, 0xE8, 0x6B, 0x41, 0xF9, 0x4C,
-        0x88, 0x77, 0xF6, 0x8F, 0xB9, 0x5A, 0xAD, 0x0A,
-        0x35, 0x82, 0x06, 0x95, 0xE2, 0x03, 0x74, 0x13,
-        0xBD, 0x57, 0xA9, 0xC4, 0x47, 0xDF, 0x11, 0xD9
-    };
 
-    const uint8_t challenge2[32] = {
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
-    };
+    if (argc != 4) {
+        shell_error(shell, "Usage: ta_zk <challenge1> <challenge2> <nonce>");
+        shell_print(shell, "values may be decimal or hex prefixed with 0x (challenge - 32 bytes, nonce - 64 bytes)");
+        return -EINVAL;
+    }
 
-    const uint8_t nonce[64] = {
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
-    };
+    uint8_t challenge1[32], challenge2[32], nonce[64];
     uint8_t P_x[32], P_y[32], v[64], w[64];
+    int rc;
+
+    shell_print(shell, "Raw challenge1 string (len=%zu):", strlen(argv[1]));
+    shell_hexdump(shell, (const uint8_t *)argv[1], strlen(argv[1]));
+
+    shell_print(shell, "Raw challenge2 string (len=%zu):", strlen(argv[2]));
+    shell_hexdump(shell, (const uint8_t *)argv[2], strlen(argv[2]));
+
+    shell_print(shell, "Raw nonce string (len=%zu):", strlen(argv[3]));
+    shell_hexdump(shell, (const uint8_t *)argv[3], strlen(argv[3]));
+
+    /* Parse either decimal or 0x-hex into 32-byte big-endian buffers */
+    rc = parse_numeric_string_to_fixed(argv[1], challenge1, sizeof(challenge1));
+    if (rc == -EOVERFLOW) {
+        shell_error(shell, "challenge1 too large to fit in 32 bytes");
+        return rc;
+    } else if (rc != 0) {
+        shell_error(shell, "Invalid challenge1 (not a decimal or 0x-hex number)");
+        return rc;
+    }
+
+    rc = parse_numeric_string_to_fixed(argv[2], challenge2, sizeof(challenge2));
+    if (rc == -EOVERFLOW) {
+        shell_error(shell, "challenge2 too large to fit in 32 bytes");
+        return rc;
+    } else if (rc != 0) {
+        shell_error(shell, "Invalid challenge2 (not a decimal or 0x-hex number)");
+        return rc;
+    }
+
+    rc = parse_numeric_string_to_fixed(argv[3], nonce, sizeof(nonce));
+    if (rc == -EOVERFLOW) {
+        shell_error(shell, "nonce too large to fit in 64 bytes");
+        return rc;
+    } else if (rc != 0) {
+        shell_error(shell, "Invalid nonce (not a decimal or 0x-hex number)");
+        return rc;
+    }
+
+    /* Debug: show parsed fixed-size big-endian buffers */
+    shell_print(shell, "Parsed challenge1 (32 bytes, big-endian):");
+    shell_hexdump(shell, challenge1, sizeof(challenge1));
+
+    shell_print(shell, "Parsed challenge2 (32 bytes, big-endian):");
+    shell_hexdump(shell, challenge2, sizeof(challenge2));
+
+    shell_print(shell, "Parsed nonce (64 bytes, big-endian):");
+    shell_hexdump(shell, nonce, sizeof(nonce));
+
     int res = call_puf_ta_get_zk_proofs(tee_dev, session_id, (uint8_t *)shm_ptr,
                                         challenge1, challenge2, nonce,
                                         P_x, P_y, v, w);
@@ -156,17 +280,17 @@ int call_puf_ta_init(const struct device *tee_dev, int session_id, uint8_t *shm_
         memcpy(g_y, (void *)(shm_ptr + param[1].a), param[1].b);
         memcpy(h_x, (void *)(shm_ptr + param[2].a), param[2].b);
         memcpy(h_y, (void *)(shm_ptr + param[3].a), param[3].b);
+
+        LOG_HEXDUMP_DBG(g_x, 32, "g_x (hex): ");
+        LOG_HEXDUMP_DBG(g_y, 32, "g_y (hex): ");
+        LOG_HEXDUMP_DBG(h_x, 32, "h_x (hex): ");
+        LOG_HEXDUMP_DBG(h_y, 32, "h_y (hex): ");
+
+        hex_to_decimal(g_x, 32, "g_x (decimal): ");
+        hex_to_decimal(g_y, 32, "g_y (decimal): ");
+        hex_to_decimal(h_x, 32, "h_x (decimal): ");
+        hex_to_decimal(h_y, 32, "h_y (decimal): ");
     }
-
-    LOG_HEXDUMP_DBG(g_x, 32, "g_x (hex): ");
-    LOG_HEXDUMP_DBG(g_y, 32, "g_y (hex): ");
-    LOG_HEXDUMP_DBG(h_x, 32, "h_x (hex): ");
-    LOG_HEXDUMP_DBG(h_y, 32, "h_y (hex): ");
-
-    hex_to_decimal(g_x, 32, "g_x (decimal): ");
-    hex_to_decimal(g_y, 32, "g_y (decimal): ");
-    hex_to_decimal(h_x, 32, "h_x (decimal): ");
-    hex_to_decimal(h_y, 32, "h_y (decimal): ");
 
     return ret;
 }
@@ -212,13 +336,13 @@ int call_puf_ta_get_commitment(const struct device *tee_dev, int session_id, uin
     if (ret == 0){
         memcpy(COM_x, (void *)(shm_ptr + param[2].a), param[2].b);
         memcpy(COM_y, (void *)(shm_ptr + param[3].a), param[3].b);
+
+        LOG_HEXDUMP_DBG(COM_x, 32, "COM_x (hex): ");
+        LOG_HEXDUMP_DBG(COM_y, 32, "COM_y (hex): ");
+
+        hex_to_decimal(COM_x, 32, "COM_x (decimal): ");
+        hex_to_decimal(COM_y, 32, "COM_y (decimal): ");
     }
-
-    LOG_HEXDUMP_DBG(COM_x, 32, "COM_x (hex): ");
-    LOG_HEXDUMP_DBG(COM_y, 32, "COM_y (hex): ");
-
-    hex_to_decimal(COM_x, 32, "COM_x (decimal): ");
-    hex_to_decimal(COM_y, 32, "COM_y (decimal): ");
 
     return ret;
 }
@@ -271,17 +395,17 @@ int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint
         memcpy(P_y, (void *)(shm_ptr + param[1].a), param[1].b);
         memcpy(v,   (void *)(shm_ptr + param[2].a), param[2].b);
         memcpy(w,   (void *)(shm_ptr + param[3].a), param[3].b);
+
+        LOG_HEXDUMP_DBG(P_x, 32, "P_x (hex): ");
+        LOG_HEXDUMP_DBG(P_y, 32, "P_y (hex): ");
+        LOG_HEXDUMP_DBG(v,   64, "v (hex): ");
+        LOG_HEXDUMP_DBG(w,   64, "w (hex): ");
+
+        hex_to_decimal(P_x, 32, "P_x (decimal): ");
+        hex_to_decimal(P_y, 32, "P_y (decimal): ");
+        hex_to_decimal(v,   64, "v (decimal): ");
+        hex_to_decimal(w,   64, "w (decimal): ");
     }
-
-    LOG_HEXDUMP_DBG(P_x, 32, "P_x (hex): ");
-    LOG_HEXDUMP_DBG(P_y, 32, "P_y (hex): ");
-    LOG_HEXDUMP_DBG(v,   64, "v (hex): ");
-    LOG_HEXDUMP_DBG(w,   64, "w (hex): ");
-
-    hex_to_decimal(P_x, 32, "P_x (decimal): ");
-    hex_to_decimal(P_y, 32, "P_y (decimal): ");
-    hex_to_decimal(v,   64, "v (decimal): ");
-    hex_to_decimal(w,   64, "w (decimal): ");
 
     return ret;
 }
