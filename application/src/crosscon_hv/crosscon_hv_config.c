@@ -18,7 +18,8 @@ LOG_MODULE_DECLARE(PUF_VM);
 const uint8_t PUF_TA_UUID[TEE_UUID_LEN] = PUF_TA_UUID_BYTES;
 
 #define MAX_CALLS_PER_WINDOW 5
-#define TIME_WINDOW_MS (30 * 1000)  // 30 seconds
+#define SECOND_LENGTH 150 // Due to nature of CROSSCON Hypervisor and context switching between VM's regular timing gets drifted. This needs to be compensated
+#define TIME_WINDOW_MS (30 * SECOND_LENGTH)  // ~30 seconds
 
 static uint64_t call_timestamps[MAX_CALLS_PER_WINDOW] = {0};
 static int ts_index = 0;
@@ -69,9 +70,15 @@ TEE_Result handle_invoke_func(volatile GP_InvokeArgs *args,
 
     // Enforce rate limiting
     uint64_t now = k_uptime_get();
+
+    LOG_DBG("Current time: %" PRIu64, now);
     int calls_in_window = 0;
 
+    LOG_DBG("Time between invocations: %d", TIME_WINDOW_MS);
+
+    // Count calls within the time window
     for (int i = 0; i < MAX_CALLS_PER_WINDOW; i++) {
+        LOG_DBG("Timestamp %d: %" PRIu64, i, call_timestamps[i]);
         if (call_timestamps[i] != 0 && (now - call_timestamps[i]) < TIME_WINDOW_MS) {
             calls_in_window++;
         }
@@ -82,9 +89,14 @@ TEE_Result handle_invoke_func(volatile GP_InvokeArgs *args,
         return TEE_ERROR_ACCESS_DENIED;
     }
 
-    // Store timestamp
-    call_timestamps[ts_index] = now;
-    ts_index = (ts_index + 1) % MAX_CALLS_PER_WINDOW;
+    // Store timestamp in a slot that is empty or expired
+    for (int i = 0; i < MAX_CALLS_PER_WINDOW; i++) {
+        if (call_timestamps[i] == 0 || (now - call_timestamps[i]) >= TIME_WINDOW_MS) {
+            call_timestamps[i] = now;
+            LOG_DBG("Timestamp stored with an index: %d", i);
+            break;
+        }
+    }
 
     // Match and invoke
     for (int i = 0; i < FUNCTION_TABLE_SIZE; ++i) {
