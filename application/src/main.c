@@ -101,11 +101,28 @@ static int cmd_ta_init(const struct shell *shell, size_t argc, char **argv)
     }
 
     uint8_t g_x[32], g_y[32], h_x[32], h_y[32];
+
+    shell_print(shell, "Calling PUF_TA_init");
+
     int res = call_puf_ta_init(tee_dev, session_id, (uint8_t *)shm_ptr, g_x, g_y, h_x, h_y);
     if (res) {
         shell_error(shell, "PUF_TA_init failed: %d", res);
         return res;
     }
+
+    shell_print(shell, "g_x (hex): ");
+    shell_hexdump(shell, g_x, sizeof(g_x));
+    shell_print(shell, "g_y (hex): ");
+    shell_hexdump(shell, g_y, sizeof(g_y));
+    shell_print(shell, "h_x (hex): ");
+    shell_hexdump(shell, h_x, sizeof(h_x));
+    shell_print(shell, "h_y (hex): ");
+    shell_hexdump(shell, h_y, sizeof(h_y));
+    hex_to_decimal(shell, g_x, sizeof(g_x), "g_x (decimal): ");
+    hex_to_decimal(shell, g_y, sizeof(g_y), "g_y (decimal): ");
+    hex_to_decimal(shell, h_x, sizeof(h_x), "h_x (decimal): ");
+    hex_to_decimal(shell, h_y, sizeof(h_y), "h_y (decimal): ");
+
     shell_print(shell, "PUF_TA_init success");
     return 0;
 }
@@ -154,12 +171,23 @@ static int cmd_ta_commit(const struct shell *shell, size_t argc, char **argv)
     shell_print(shell, "Parsed challenge2 (32 bytes, big-endian):");
     shell_hexdump(shell, challenge2, sizeof(challenge2));
 
+    shell_print(shell, "Calling PUF_TA_get_commitment");
+
     int res = call_puf_ta_get_commitment(tee_dev, session_id, (uint8_t *)shm_ptr,
                                          challenge1, challenge2, COM_x, COM_y);
     if (res) {
         shell_error(shell, "PUF_TA_get_commitment failed: %d", res);
+        shell_error(shell, "Have you ran PUF_TA_init first?");
         return res;
     }
+
+    shell_print(shell, "COM_x (hex): ");
+    shell_hexdump(shell, COM_x, sizeof(COM_x));
+    shell_print(shell, "COM_y (hex): ");
+    shell_hexdump(shell, COM_y, sizeof(COM_y));
+    hex_to_decimal(shell, COM_x, sizeof(COM_x), "COM_x (decimal): ");
+    hex_to_decimal(shell, COM_y, sizeof(COM_y), "COM_y (decimal): ");
+
     shell_print(shell, "PUF_TA_get_commitment success");
     return 0;
 }
@@ -229,8 +257,23 @@ static int cmd_ta_zk(const struct shell *shell, size_t argc, char **argv)
                                         P_x, P_y, v, w);
     if (res) {
         shell_error(shell, "PUF_TA_get_ZK_proofs failed: %d", res);
+        shell_error(shell, "Have you ran PUF_TA_init first?");
         return res;
     }
+
+    shell_print(shell, "P_x (hex): ");
+    shell_hexdump(shell, P_x, sizeof(P_x));
+    shell_print(shell, "P_y (hex): ");
+    shell_hexdump(shell, P_y, sizeof(P_y));
+    shell_print(shell, "v (hex): ");
+    shell_hexdump(shell, v, sizeof(v));
+    shell_print(shell, "w (hex): ");
+    shell_hexdump(shell, w, sizeof(w));
+    hex_to_decimal(shell, P_x, sizeof(P_x), "P_x (decimal): ");
+    hex_to_decimal(shell, P_y, sizeof(P_y), "P_y (decimal): ");
+    hex_to_decimal(shell, v, sizeof(v), "v (decimal): ");
+    hex_to_decimal(shell, w, sizeof(w), "w (decimal): ");
+
     shell_print(shell, "PUF_TA_get_ZK_proofs success");
     return 0;
 }
@@ -245,8 +288,6 @@ int call_puf_ta_init(const struct device *tee_dev, int session_id, uint8_t *shm_
                      uint8_t g_x[32], uint8_t g_y[32], uint8_t h_x[32], uint8_t h_y[32])
 {
     int ret;
-
-    LOG_INF("Calling PUF_TA_init");
 
     param[0].attr = TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT;
     param[0].a    = (uint64_t)(VMS_MEMREF0_OFFSET); // offsets
@@ -280,16 +321,6 @@ int call_puf_ta_init(const struct device *tee_dev, int session_id, uint8_t *shm_
         memcpy(g_y, (void *)(shm_ptr + param[1].a), param[1].b);
         memcpy(h_x, (void *)(shm_ptr + param[2].a), param[2].b);
         memcpy(h_y, (void *)(shm_ptr + param[3].a), param[3].b);
-
-        LOG_HEXDUMP_DBG(g_x, 32, "g_x (hex): ");
-        LOG_HEXDUMP_DBG(g_y, 32, "g_y (hex): ");
-        LOG_HEXDUMP_DBG(h_x, 32, "h_x (hex): ");
-        LOG_HEXDUMP_DBG(h_y, 32, "h_y (hex): ");
-
-        hex_to_decimal(g_x, 32, "g_x (decimal): ");
-        hex_to_decimal(g_y, 32, "g_y (decimal): ");
-        hex_to_decimal(h_x, 32, "h_x (decimal): ");
-        hex_to_decimal(h_y, 32, "h_y (decimal): ");
     }
 
     return ret;
@@ -299,8 +330,6 @@ int call_puf_ta_get_commitment(const struct device *tee_dev, int session_id, uin
                                uint8_t challenge1[32], uint8_t challenge2[32], uint8_t COM_x[32], uint8_t COM_y[32])
 {
     int ret;
-
-    LOG_INF("Calling PUF_TA_get_commitment");
 
     param[0].attr = TEE_PARAM_ATTR_TYPE_MEMREF_INPUT;
     param[0].a    = (uint64_t)(VMS_MEMREF0_OFFSET); // offsets
@@ -336,12 +365,6 @@ int call_puf_ta_get_commitment(const struct device *tee_dev, int session_id, uin
     if (ret == 0){
         memcpy(COM_x, (void *)(shm_ptr + param[2].a), param[2].b);
         memcpy(COM_y, (void *)(shm_ptr + param[3].a), param[3].b);
-
-        LOG_HEXDUMP_DBG(COM_x, 32, "COM_x (hex): ");
-        LOG_HEXDUMP_DBG(COM_y, 32, "COM_y (hex): ");
-
-        hex_to_decimal(COM_x, 32, "COM_x (decimal): ");
-        hex_to_decimal(COM_y, 32, "COM_y (decimal): ");
     }
 
     return ret;
@@ -353,11 +376,6 @@ int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint
                               uint8_t P_x[32], uint8_t P_y[32], uint8_t v[64], uint8_t w[64])
 {
     int ret;
-
-    LOG_INF("Calling PUF_TA_get_ZK_proofs");
-
-    LOG_HEXDUMP_INF(nonce, 64, "used nonce (hex): ");
-
     param[0].attr = TEE_PARAM_ATTR_TYPE_MEMREF_INOUT;
     param[0].a    = (uint64_t)(VMS_MEMREF0_OFFSET);
     param[0].b    = (uint64_t)32;
@@ -395,22 +413,11 @@ int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint
         memcpy(P_y, (void *)(shm_ptr + param[1].a), param[1].b);
         memcpy(v,   (void *)(shm_ptr + param[2].a), param[2].b);
         memcpy(w,   (void *)(shm_ptr + param[3].a), param[3].b);
-
-        LOG_HEXDUMP_DBG(P_x, 32, "P_x (hex): ");
-        LOG_HEXDUMP_DBG(P_y, 32, "P_y (hex): ");
-        LOG_HEXDUMP_DBG(v,   64, "v (hex): ");
-        LOG_HEXDUMP_DBG(w,   64, "w (hex): ");
-
-        hex_to_decimal(P_x, 32, "P_x (decimal): ");
-        hex_to_decimal(P_y, 32, "P_y (decimal): ");
-        hex_to_decimal(v,   64, "v (decimal): ");
-        hex_to_decimal(w,   64, "w (decimal): ");
     }
 
     return ret;
 }
-
-void hex_to_decimal(uint8_t *array, size_t len, const char *label)
+void hex_to_decimal(const struct shell *shell, uint8_t *array, size_t len, const char *label)
 {
     int ret;
     mbedtls_mpi mpi;
@@ -450,7 +457,7 @@ void hex_to_decimal(uint8_t *array, size_t len, const char *label)
         return;
     }
 
-    LOG_INF("%s%s", label, decimal_str);
+    shell_print(shell, "%s%s", label, decimal_str);
 
     free(decimal_str);
     mbedtls_mpi_free(&mpi);
@@ -458,8 +465,6 @@ void hex_to_decimal(uint8_t *array, size_t len, const char *label)
 
 int main(void)
 {
-    LOG_INF("Initializing TEE");
-
     tee_dev = device_get_binding("crosscon_hv_tee");
     if (!tee_dev) {
         LOG_ERR("Failed to bind device 'crosscon_hv_tee'");
@@ -483,8 +488,8 @@ int main(void)
         return -1;
     }
 
-    LOG_INF("TEE Session opened: ID = %u", session_id);
-    LOG_INF("Shell ready. Try `ta_init`, `ta_commit`, `ta_zk`");
+    printk("TEE Session opened: ID = %u\n", session_id);
+    printk("Shell ready. Try `ta_init`, `ta_commit`, `ta_zk`\n");
 
     return 0;
 }

@@ -93,7 +93,7 @@ void ipc_irq_client_handler(void)
         case TEE_CALL_TYPE_OPEN_SESSION:
             session_arg.ret        = msg->session_args.ret;
             session_arg.ret_origin = msg->session_args.ret_origin;
-            LOG_INF("TEE returned: ret = 0x%08X, origin = 0x%08X", session_arg.ret, session_arg.ret_origin);
+            LOG_DBG("TEE returned: ret = 0x%08X, origin = 0x%08X", session_arg.ret, session_arg.ret_origin);
             if (session_arg.ret != TEE_SUCCESS) {
                 LOG_ERR("Failed opening sesssion");
             }
@@ -104,11 +104,11 @@ void ipc_irq_client_handler(void)
         case TEE_CALL_TYPE_CLOSE_SESSION:
             session_arg.ret        = msg->session_args.ret;
             session_arg.ret_origin = msg->session_args.ret_origin;
-            LOG_INF("TEE returned: ret = 0x%08X, origin = 0x%08X", session_arg.ret, session_arg.ret_origin);
+            LOG_DBG("TEE returned: ret = 0x%08X, origin = 0x%08X", session_arg.ret, session_arg.ret_origin);
             break;
     }
 
     __DMB(); // Ensure all writes complete before notifying
-    LOG_INF("IRQ Handled.");
+    LOG_DBG("IRQ Handled.");
     k_sem_give(&tee_response_sem);
 }
