@@ -33,6 +33,26 @@ static const uint8_t CLIENT_UUID[TEE_UUID_LEN] = CLIENT_UUID_BYTES;
 static const struct device *tee_dev;
 static volatile uint8_t *shm_ptr;
 
+struct ta_commit_ctx {
+    bool challenge1_set;
+    bool challenge2_set;
+    uint8_t challenge1[32];
+    uint8_t challenge2[32];
+};
+
+
+struct ta_zk_get_proofs_ctx {
+    bool challenge1_set;
+    bool challenge2_set;
+    bool nonce_set;
+    uint8_t challenge1[32];
+    uint8_t challenge2[32];
+    uint8_t nonce[64];
+};
+
+static struct ta_commit_ctx commit_ctx;
+static struct ta_zk_get_proofs_ctx zk_get_proofs_ctx;
+
 /* Parses a numeric string into a fixed-length big-endian byte buffer.
  * - If `str` starts with "0x" or "0X" it is parsed as hex (base 16).
  * - Otherwise it is parsed as decimal (base 10).
@@ -127,54 +147,135 @@ static int cmd_ta_init(const struct shell *shell, size_t argc, char **argv)
     return 0;
 }
 
-static int cmd_ta_commit(const struct shell *shell, size_t argc, char **argv)
+static int cmd_ta_commit_set_challenge1(const struct shell *shell, size_t argc, char **argv)
 {
-    if (argc != 3) {
-        shell_error(shell, "Usage: ta_commit <challenge1> <challenge2>");
-        shell_print(shell, "challenge may be decimal or hex prefixed with 0x (fits in 32 bytes)");
+    if (argc != 2) {
+        shell_error(shell, "Usage: ta_commit_set_challenge1 <value>");
         return -EINVAL;
     }
 
-    uint8_t challenge1[32], challenge2[32], COM_x[32], COM_y[32];
-    int rc;
-
-    /* Debug: show raw input strings */
-    shell_print(shell, "Raw challenge1 string (len=%zu):", strlen(argv[1]));
-    shell_hexdump(shell, (const uint8_t *)argv[1], strlen(argv[1]));
-
-    shell_print(shell, "Raw challenge2 string (len=%zu):", strlen(argv[2]));
-    shell_hexdump(shell, (const uint8_t *)argv[2], strlen(argv[2]));
-
-    /* Parse either decimal or 0x-hex into 32-byte big-endian buffers */
-    rc = parse_numeric_string_to_fixed(argv[1], challenge1, sizeof(challenge1));
-    if (rc == -EOVERFLOW) {
-        shell_error(shell, "challenge1 too large to fit in 32 bytes");
-        return rc;
-    } else if (rc != 0) {
-        shell_error(shell, "Invalid challenge1 (not a decimal or 0x-hex number)");
+    int rc = parse_numeric_string_to_fixed(argv[1],
+                                           commit_ctx.challenge1,
+                                           sizeof(commit_ctx.challenge1));
+    if (rc) {
+        shell_error(shell, "Failed to parse challenge1 (rc=%d)", rc);
         return rc;
     }
 
-    rc = parse_numeric_string_to_fixed(argv[2], challenge2, sizeof(challenge2));
-    if (rc == -EOVERFLOW) {
-        shell_error(shell, "challenge2 too large to fit in 32 bytes");
-        return rc;
-    } else if (rc != 0) {
-        shell_error(shell, "Invalid challenge2 (not a decimal or 0x-hex number)");
-        return rc;
-    }
-
-    /* Debug: show parsed fixed-size big-endian buffers */
     shell_print(shell, "Parsed challenge1 (32 bytes, big-endian):");
-    shell_hexdump(shell, challenge1, sizeof(challenge1));
+    shell_hexdump(shell, commit_ctx.challenge1, sizeof(commit_ctx.challenge1));
+
+    commit_ctx.challenge1_set = true;
+    shell_print(shell, "challenge1 set successfully");
+    return 0;
+}
+
+static int cmd_ta_commit_set_challenge2(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc != 2) {
+        shell_error(shell, "Usage: ta_commit_set_challenge2 <value>");
+        return -EINVAL;
+    }
+
+    int rc = parse_numeric_string_to_fixed(argv[1],
+                                           commit_ctx.challenge2,
+                                           sizeof(commit_ctx.challenge2));
+    if (rc) {
+        shell_error(shell, "Failed to parse challenge2 (rc=%d)", rc);
+        return rc;
+    }
 
     shell_print(shell, "Parsed challenge2 (32 bytes, big-endian):");
-    shell_hexdump(shell, challenge2, sizeof(challenge2));
+    shell_hexdump(shell, commit_ctx.challenge2, sizeof(commit_ctx.challenge2));
+
+    commit_ctx.challenge2_set = true;
+    shell_print(shell, "challenge2 set successfully");
+    return 0;
+}
+
+static int cmd_ta_zk_get_proofs_set_challenge1(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc != 2) {
+        shell_error(shell, "Usage: ta_zk_get_proofs_set_challenge1 <value>");
+        return -EINVAL;
+    }
+
+    int rc = parse_numeric_string_to_fixed(argv[1],
+                                           zk_get_proofs_ctx.challenge1,
+                                           sizeof(zk_get_proofs_ctx.challenge1));
+    if (rc) {
+        shell_error(shell, "Failed to parse challenge1 (rc=%d)", rc);
+        return rc;
+    }
+
+    shell_print(shell, "Parsed challenge1 (32 bytes, big-endian):");
+    shell_hexdump(shell, zk_get_proofs_ctx.challenge1, sizeof(zk_get_proofs_ctx.challenge1));
+
+    zk_get_proofs_ctx.challenge1_set = true;
+    shell_print(shell, "challenge1 set successfully");
+    return 0;
+}
+
+static int cmd_ta_zk_get_proofs_set_challenge2(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc != 2) {
+        shell_error(shell, "Usage: ta_zk_get_proofs_set_challenge2 <value>");
+        return -EINVAL;
+    }
+
+    int rc = parse_numeric_string_to_fixed(argv[1],
+                                           zk_get_proofs_ctx.challenge2,
+                                           sizeof(zk_get_proofs_ctx.challenge2));
+    if (rc) {
+        shell_error(shell, "Failed to parse challenge2 (rc=%d)", rc);
+        return rc;
+    }
+
+    shell_print(shell, "Parsed challenge2 (32 bytes, big-endian):");
+    shell_hexdump(shell, zk_get_proofs_ctx.challenge2, sizeof(zk_get_proofs_ctx.challenge2));
+
+    zk_get_proofs_ctx.challenge2_set = true;
+    shell_print(shell, "challenge2 set successfully");
+    return 0;
+}
+
+static int cmd_ta_zk_get_proofs_set_nonce(const struct shell *shell, size_t argc, char **argv)
+{
+    if (argc != 2) {
+        shell_error(shell, "Usage: ta_zk_get_proofs_set_nonce <value>");
+        return -EINVAL;
+    }
+
+    int rc = parse_numeric_string_to_fixed(argv[1],
+                                           zk_get_proofs_ctx.nonce,
+                                           sizeof(zk_get_proofs_ctx.nonce));
+    if (rc) {
+        shell_error(shell, "Failed to parse nonce (rc=%d)", rc);
+        return rc;
+    }
+
+    shell_print(shell, "Parsed nonce (64 bytes, big-endian):");
+    shell_hexdump(shell, zk_get_proofs_ctx.nonce, sizeof(zk_get_proofs_ctx.nonce));
+
+    zk_get_proofs_ctx.nonce_set = true;
+    shell_print(shell, "nonce set successfully");
+    return 0;
+}
+
+static int cmd_ta_commit(const struct shell *shell, size_t argc, char **argv)
+{
+    if (!commit_ctx.challenge1_set || !commit_ctx.challenge2_set) {
+        shell_error(shell, "Missing required arguments. Set them first.");
+        return -EINVAL;
+    }
+
+    uint8_t COM_x[32], COM_y[32];
+    int rc;
 
     shell_print(shell, "Calling PUF_TA_get_commitment");
 
     int res = call_puf_ta_get_commitment(tee_dev, session_id, (uint8_t *)shm_ptr,
-                                         challenge1, challenge2, COM_x, COM_y);
+                                         commit_ctx.challenge1, commit_ctx.challenge2, COM_x, COM_y);
     if (res) {
         shell_error(shell, "PUF_TA_get_commitment failed: %d", res);
         shell_error(shell, "Have you ran PUF_TA_init first?");
@@ -194,66 +295,16 @@ static int cmd_ta_commit(const struct shell *shell, size_t argc, char **argv)
 
 static int cmd_ta_zk(const struct shell *shell, size_t argc, char **argv)
 {
-
-    if (argc != 4) {
-        shell_error(shell, "Usage: ta_zk <challenge1> <challenge2> <nonce>");
-        shell_print(shell, "values may be decimal or hex prefixed with 0x (challenge - 32 bytes, nonce - 64 bytes)");
+    if (!zk_get_proofs_ctx.challenge1_set || !zk_get_proofs_ctx.challenge2_set || !zk_get_proofs_ctx.nonce_set) {
+        shell_error(shell, "Missing required arguments. Set them first.");
         return -EINVAL;
     }
 
-    uint8_t challenge1[32], challenge2[32], nonce[64];
     uint8_t P_x[32], P_y[32], v[64], w[64];
     int rc;
 
-    shell_print(shell, "Raw challenge1 string (len=%zu):", strlen(argv[1]));
-    shell_hexdump(shell, (const uint8_t *)argv[1], strlen(argv[1]));
-
-    shell_print(shell, "Raw challenge2 string (len=%zu):", strlen(argv[2]));
-    shell_hexdump(shell, (const uint8_t *)argv[2], strlen(argv[2]));
-
-    shell_print(shell, "Raw nonce string (len=%zu):", strlen(argv[3]));
-    shell_hexdump(shell, (const uint8_t *)argv[3], strlen(argv[3]));
-
-    /* Parse either decimal or 0x-hex into 32-byte big-endian buffers */
-    rc = parse_numeric_string_to_fixed(argv[1], challenge1, sizeof(challenge1));
-    if (rc == -EOVERFLOW) {
-        shell_error(shell, "challenge1 too large to fit in 32 bytes");
-        return rc;
-    } else if (rc != 0) {
-        shell_error(shell, "Invalid challenge1 (not a decimal or 0x-hex number)");
-        return rc;
-    }
-
-    rc = parse_numeric_string_to_fixed(argv[2], challenge2, sizeof(challenge2));
-    if (rc == -EOVERFLOW) {
-        shell_error(shell, "challenge2 too large to fit in 32 bytes");
-        return rc;
-    } else if (rc != 0) {
-        shell_error(shell, "Invalid challenge2 (not a decimal or 0x-hex number)");
-        return rc;
-    }
-
-    rc = parse_numeric_string_to_fixed(argv[3], nonce, sizeof(nonce));
-    if (rc == -EOVERFLOW) {
-        shell_error(shell, "nonce too large to fit in 64 bytes");
-        return rc;
-    } else if (rc != 0) {
-        shell_error(shell, "Invalid nonce (not a decimal or 0x-hex number)");
-        return rc;
-    }
-
-    /* Debug: show parsed fixed-size big-endian buffers */
-    shell_print(shell, "Parsed challenge1 (32 bytes, big-endian):");
-    shell_hexdump(shell, challenge1, sizeof(challenge1));
-
-    shell_print(shell, "Parsed challenge2 (32 bytes, big-endian):");
-    shell_hexdump(shell, challenge2, sizeof(challenge2));
-
-    shell_print(shell, "Parsed nonce (64 bytes, big-endian):");
-    shell_hexdump(shell, nonce, sizeof(nonce));
-
     int res = call_puf_ta_get_zk_proofs(tee_dev, session_id, (uint8_t *)shm_ptr,
-                                        challenge1, challenge2, nonce,
+                                        zk_get_proofs_ctx.challenge1, zk_get_proofs_ctx.challenge2, zk_get_proofs_ctx.nonce,
                                         P_x, P_y, v, w);
     if (res) {
         shell_error(shell, "PUF_TA_get_ZK_proofs failed: %d", res);
@@ -280,8 +331,20 @@ static int cmd_ta_zk(const struct shell *shell, size_t argc, char **argv)
 
 /* Register commands under one root (e.g., `tee`) */
 SHELL_CMD_REGISTER(ta_init, NULL, "Call PUF_TA_init", cmd_ta_init);
-SHELL_CMD_REGISTER(ta_commit, NULL, "Call PUF_TA_get_commitment", cmd_ta_commit);
-SHELL_CMD_REGISTER(ta_zk, NULL, "Call PUF_TA_get_ZK_proofs", cmd_ta_zk);
+SHELL_CMD_REGISTER(ta_commit_set_challenge1, NULL,
+                   "Set challenge1 for ta_commit_invoke", cmd_ta_commit_set_challenge1);
+SHELL_CMD_REGISTER(ta_commit_set_challenge2, NULL,
+                   "Set challenge2 for ta_commit_invoke", cmd_ta_commit_set_challenge2);
+SHELL_CMD_REGISTER(ta_commit_invoke, NULL,
+                   "Invoke PUF_TA_get_commitment with arguments set by `ta_commit_set*`", cmd_ta_commit);
+
+SHELL_CMD_REGISTER(ta_zk_get_proofs_set_challenge1, NULL,
+                   "Set challenge1 for ta_zk_get_proofs_invoke", cmd_ta_zk_get_proofs_set_challenge1);
+SHELL_CMD_REGISTER(ta_zk_get_proofs_set_challenge2, NULL,
+                   "Set challenge2 for ta_zk_get_proofs_invoke", cmd_ta_zk_get_proofs_set_challenge2);
+SHELL_CMD_REGISTER(ta_zk_get_proofs_set_nonce, NULL,
+                   "Set nonce for ta_zk_get_proofs_invoke", cmd_ta_zk_get_proofs_set_nonce);
+SHELL_CMD_REGISTER(ta_zk_get_proofs_invoke, NULL, "Call PUF_TA_get_ZK_proofs", cmd_ta_zk);
 
 // Helper functions to make the calling function logic easier to read
 int call_puf_ta_init(const struct device *tee_dev, int session_id, uint8_t *shm_ptr,
