@@ -12,6 +12,7 @@ target_sources(app PRIVATE src/main.c
                            src/commands/ta_init.c
                            src/commands/ta_commit.c
                            src/commands/ta_zk_get_proofs.c
+                           src/commands/ta_zk_verify_proofs.c
                            )
 
 include_directories(src/

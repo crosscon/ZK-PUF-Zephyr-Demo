@@ -85,7 +85,7 @@ static int cmd_ta_zk_get_proofs_set_nonce(const struct shell *shell, size_t argc
     return 0;
 }
 
-static int cmd_ta_zk(const struct shell *shell, size_t argc, char **argv)
+static int cmd_ta_zk_get_proofs(const struct shell *shell, size_t argc, char **argv)
 {
     if (!zk_get_proofs_ctx.challenge1_set || !zk_get_proofs_ctx.challenge2_set || !zk_get_proofs_ctx.nonce_set) {
         shell_error(shell, "Missing required arguments. Set them first.");
@@ -127,7 +127,7 @@ SHELL_CMD_REGISTER(ta_zk_get_proofs_set_challenge2, NULL,
                    "Set challenge2 for ta_zk_get_proofs_invoke", cmd_ta_zk_get_proofs_set_challenge2);
 SHELL_CMD_REGISTER(ta_zk_get_proofs_set_nonce, NULL,
                    "Set nonce for ta_zk_get_proofs_invoke", cmd_ta_zk_get_proofs_set_nonce);
-SHELL_CMD_REGISTER(ta_zk_get_proofs_invoke, NULL, "Call PUF_TA_get_ZK_proofs", cmd_ta_zk);
+SHELL_CMD_REGISTER(ta_zk_get_proofs_invoke, NULL, "Call PUF_TA_get_ZK_proofs", cmd_ta_zk_get_proofs);
 
 int call_puf_ta_get_zk_proofs(const struct device *tee_dev, int session_id, uint8_t *shm_ptr,
                               uint8_t challenge1[32], uint8_t challenge2[32], uint8_t nonce[64],

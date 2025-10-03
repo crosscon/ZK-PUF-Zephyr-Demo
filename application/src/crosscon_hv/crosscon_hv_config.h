@@ -154,6 +154,6 @@ typedef struct {
 
 _Static_assert(VMS_HEADER_SIZE < VMS_IPC_FULL_SIZE, "Shared memory header exceeds total size");
 _Static_assert((VMS_USABLE_PAYLOAD_SIZE % 4) == 0, "Payload size must be 4-byte aligned");
-_Static_assert(VMS_USABLE_PAYLOAD_SIZE >= 4 * 256, "VMS_USABLE_PAYLOAD_SIZE must be at least 1024 bytes");
+_Static_assert(VMS_MEMREF_SLOT_SIZE >= 448, "VMS_MEMREF_SLOT_SIZE must be at least 448 bytes");
 
 #endif // CROSSCON_HV_CONFIG_H
