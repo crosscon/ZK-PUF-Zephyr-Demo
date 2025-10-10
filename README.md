@@ -14,6 +14,13 @@ portability.
 OP-TEE/MTower. At the time of starting this project no TEE was available for the
 platform.
 
+For more theoretical background and a basis for this work take a look at
+> **L. Petzi, A. Dmitrienko, and I. Visconti**,
+> "PUF-Based Authentication in IoT Against Strong Physical Adversary Using Zero-Knowledge Proofs,"
+> *2024 IEEE Security and Privacy Workshops (SPW)*,
+> San Francisco, CA, USA, 2024, pp. 312–319.
+> doi: [10.1109/SPW63631.2024.10918871](https://doi.org/10.1109/SPW63631.2024.10918871)
+
 ## Building/Usage
 
 The application can be used as a standalone demo via the
