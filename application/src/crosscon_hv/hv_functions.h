@@ -27,8 +27,8 @@ typedef struct {
     uint8_t P_y[32];
     uint8_t v[64];
     uint8_t w[64];
-    uint8_t n[64];
-} verify_zk_proofs;
+    uint8_t nonce[64];
+} __attribute__((packed)) zk_proofs_mem_struct;
 
 #define FUNCTION_TABLE_SIZE 4
 extern const func_id_map_t function_table[FUNCTION_TABLE_SIZE];

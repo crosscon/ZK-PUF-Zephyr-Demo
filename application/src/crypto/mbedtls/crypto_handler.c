@@ -68,6 +68,14 @@ size_t TEE_BigIntSizeInBytes(const TEE_BigInt *X) {
     return mbedtls_mpi_size(&X->mpi);
 }
 
+TEE_Result TEE_BigIntSetWord(TEE_BigInt *X, unsigned long value)
+{
+    if (!X) return TEE_ERROR_BAD_PARAMETERS;
+    int ret = mbedtls_mpi_lset(&X->mpi, value);
+    if (ret != 0) return TEE_ERROR_GENERIC;
+    return TEE_SUCCESS;
+}
+
 // ----------------------------------------
 // TEE_ECCurve mapping
 // ----------------------------------------
@@ -80,6 +88,20 @@ TEE_ECCurve* TEE_ECCurveAlloc(void) {
     TEE_ECCurve *curve = malloc(sizeof(TEE_ECCurve));
     mbedtls_ecp_group_init(&curve->grp);
     return curve;
+}
+
+/* Copy the curve order (grp->grp.N) into `out` (which must be allocated/initialized). */
+TEE_Result TEE_ECCurveGetOrder(const TEE_ECCurve *curve, TEE_BigInt *out)
+{
+    if (!curve || !out) return TEE_ERROR_BAD_PARAMETERS;
+
+    /* out must be allocated (mbedtls_mpi_init done by TEE_BigIntAlloc) */
+    if (mbedtls_mpi_copy(&out->mpi, &curve->grp.N) != 0) {
+        LOG_ERR("TEE_ECCurveGetOrder: mbedtls_mpi_copy failed");
+        return TEE_ERROR_GENERIC;
+    }
+
+    return TEE_SUCCESS;
 }
 
 // ----------------------------------------
@@ -133,6 +155,51 @@ TEE_Result TEE_ECPointMulAdd(TEE_ECPoint *R,
 
     if (ret != 0) {
         LOG_ERR("mbedtls_ecp_muladd failed: -0x%04X", -ret);
+        return TEE_ERROR_GENERIC;
+    }
+
+    return TEE_SUCCESS;
+}
+
+TEE_Result TEE_ECPointConvertFromXYBytes(TEE_ECPoint *pt,
+                                   const TEE_ECCurve *curve,
+                                   const uint8_t *x, size_t x_len,
+                                   const uint8_t *y, size_t y_len)
+{
+    int rc;
+    size_t buf_len;
+    uint8_t buf[1 + 2 * TEE_MAX_BIGINT_BYTES]; /* safe buffer for P-256 */
+
+    if (!pt || !curve || !x || !y) {
+        LOG_ERR("TEE_ECPointConvertFromXY: NULL parameter");
+        return TEE_ERROR_BAD_PARAMETERS;
+    }
+
+    if (x_len == 0 || y_len == 0 ||
+        x_len > TEE_MAX_BIGINT_BYTES || y_len > TEE_MAX_BIGINT_BYTES) {
+        LOG_ERR("TEE_ECPointConvertFromXY: invalid lengths x=%zu y=%zu", x_len, y_len);
+        return TEE_ERROR_BAD_PARAMETERS;
+    }
+
+    /* 0x04 || X || Y */
+    buf[0] = 0x04;
+    memcpy(buf + 1, x, x_len);
+    memcpy(buf + 1 + x_len, y, y_len);
+    buf_len = 1 + x_len + y_len;
+
+    /* Parse into the mbedTLS point (public API) */
+    rc = mbedtls_ecp_point_read_binary(&curve->grp, &pt->point, buf, buf_len);
+    if (rc != 0) {
+        char err_str[128];
+        LOG_ERR("mbedtls_ecp_point_read_binary failed: -0x%04X %s", -rc, err_str);
+        return TEE_ERROR_GENERIC;
+    }
+
+    /* Validate it's a curve point */
+    rc = mbedtls_ecp_check_pubkey(&curve->grp, &pt->point);
+    if (rc != 0) {
+        char err_str[128];
+        LOG_ERR("mbedtls_ecp_check_pubkey failed: -0x%04X %s", -rc, err_str);
         return TEE_ERROR_GENERIC;
     }
 

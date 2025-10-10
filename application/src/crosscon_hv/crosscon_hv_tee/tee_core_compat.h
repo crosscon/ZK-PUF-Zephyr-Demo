@@ -25,6 +25,7 @@ TEE_Result  TEE_BigIntGenerateRandom(TEE_BigInt *X, size_t num_bytes,
                                      int (*f_rng)(void *, unsigned char *, size_t),
                                      void *p_rng);
 size_t      TEE_BigIntSizeInBytes(const TEE_BigInt *X);
+TEE_Result TEE_BigIntSetWord(TEE_BigInt *X, unsigned long value);
 
 /* ECPoint operations (backend defined in crypto_handler.c) */
 TEE_ECPoint* TEE_ECPointAlloc(void);
@@ -38,10 +39,15 @@ TEE_Result   TEE_ECPointMulAdd(TEE_ECPoint *R,
                                const TEE_ECPoint *P,
                                const TEE_BigInt *n,
                                const TEE_ECPoint *Q);
+TEE_Result TEE_ECPointConvertFromXYBytes(TEE_ECPoint *pt,
+                                   const TEE_ECCurve *curve,
+                                   const uint8_t *x, size_t x_len,
+                                   const uint8_t *y, size_t y_len);
 
 /* ECCurve operations (backend defined in crypto_handler.c) */
 TEE_ECCurve* TEE_ECCurveAlloc(void);
 void         TEE_ECCurveFree(TEE_ECCurve *curve);
+TEE_Result   TEE_ECCurveGetOrder(const TEE_ECCurve *curve, TEE_BigInt *out);
 
 /* Digest operation for SHA-256 */
 TEE_DigestOperation* TEE_AllocateDigestOperation(void);
